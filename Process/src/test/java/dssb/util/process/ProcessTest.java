@@ -1,6 +1,7 @@
 package dssb.util.process;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 
@@ -22,6 +23,15 @@ public class ProcessTest {
 	public void prcessCanReturnExitCode() throws IOException, InterruptedException {
 		Process process = new Process(".", commands);
 		assertEquals(0, process.run());
+	}
+
+	@Test
+	public void prcessCanReturnLineOutput() throws IOException, InterruptedException {
+		AllLineOutputHandler handler = new AllLineOutputHandler();
+		// TODO - Find a better way to prove this.
+		Process process = new Process(".", new String[] { "bash", "-c", "ls" }, handler);
+		assertEquals(0, process.run());
+		assertFalse("".equals(handler.toString()));
 	}
 
 }
