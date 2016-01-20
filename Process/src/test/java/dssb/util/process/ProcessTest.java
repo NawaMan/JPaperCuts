@@ -2,6 +2,7 @@ package dssb.util.process;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -32,6 +33,14 @@ public class ProcessTest {
 		Process process = new Process(".", new String[] { "bash", "-c", "ls" }, handler);
 		assertEquals(0, process.run());
 		assertFalse("".equals(handler.toString()));
+	}
+
+	@Test
+	public void prcessCanReturnLineError() throws IOException, InterruptedException {
+		AllLineOutputHandler handler = new AllLineOutputHandler();
+		Process process = new Process(".", new String[] { "java", "-version" }, null, handler);
+		assertEquals(0, process.run());
+		assertTrue(handler.toString().startsWith("java version "));
 	}
 
 }
