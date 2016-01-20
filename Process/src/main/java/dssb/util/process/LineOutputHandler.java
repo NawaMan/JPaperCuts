@@ -1,5 +1,10 @@
 package dssb.util.process;
 
+/**
+ * Classes implements this interface can handle line output.
+ * 
+ * @author dssb
+ */
 public interface LineOutputHandler {
 
 	/**

@@ -30,7 +30,7 @@ public class ProcessTest {
 	public void prcessCanReturnLineOutput() throws IOException, InterruptedException {
 		AllLineOutputHandler handler = new AllLineOutputHandler();
 		// TODO - Find a better way to prove this.
-		Process process = new Process(".", new String[] { "bash", "-c", "ls" }, handler);
+		Process process = new Process(".", new String[] { "bash", "-c", "ls" }, handler, null);
 		assertEquals(0, process.run());
 		assertFalse("".equals(handler.toString()));
 	}
