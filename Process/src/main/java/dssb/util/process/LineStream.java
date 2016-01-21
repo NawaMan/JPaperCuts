@@ -3,6 +3,7 @@ package dssb.util.process;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LineStream {
 	
@@ -15,6 +16,7 @@ public class LineStream {
 	private volatile boolean isDone = false;
 	
 	private final Object mutex = new Object();
+	private final AtomicInteger version = new AtomicInteger(0);
 	
 	public LineStream(InputStream inStream) {
 		this.reader = new InputStreamReader(inStream);
@@ -82,6 +84,7 @@ public class LineStream {
 							synchronized (mutex) {
 								System.out.println("notify");
 								mutex.notifyAll();
+								version.incrementAndGet();
 							}
 						}
 					}
@@ -118,6 +121,7 @@ public class LineStream {
 
 	public String readLine(long timeout) {
 		long expireTime = (timeout < 0) ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
+		int lastVersion = 0;
 		while (true) {
 			boolean isEmpty = false;
 			boolean isOverflow = false;
@@ -128,7 +132,6 @@ public class LineStream {
 				}
 				isOverflow = (endIndex < startIndex);
 			}
-			
 			
 			if (isEmpty) {
 				if (expireTime != Long.MAX_VALUE) {
@@ -150,6 +153,7 @@ public class LineStream {
 										= new String(buffer, startIndex, buffer.length - startIndex)
 										+ new String(buffer, 0, endIndex + 1);
 								startIndex = endIndex = 0;
+								lastVersion = version.get();
 								
 								System.out.println("O3: " + LineStream.this);
 								printIndexes();
@@ -163,6 +167,7 @@ public class LineStream {
 								
 								String line = new String(buffer, startIndex, endIndex - startIndex);
 								startIndex = endIndex = 0;
+								lastVersion = version.get();
 								
 								System.out.println("N2: " + LineStream.this);
 								printIndexes();
@@ -173,59 +178,63 @@ public class LineStream {
 					}
 				}
 				
-				
-				if (isOverflow) {
-					synchronized (this) {
-						System.out.println("OF: " + LineStream.this);
-						printIndexes();
-						for (int i = startIndex; i < buffer.length; i++) {
-							char ch = buffer[i];
-							if (ch != '\n') {
-								continue;
-							}
-							
-							String line = new String(buffer, startIndex, i - startIndex + 1);
-							startIndex = i + 1;
-							
-							System.out.println("O1: " + LineStream.this);
+				if (lastVersion != version.get()) {
+					if (isOverflow) {
+						synchronized (this) {
+							System.out.println("OF: " + LineStream.this);
 							printIndexes();
-							System.out.println("Return: " + line);
-							return line;
+							for (int i = startIndex; i < buffer.length; i++) {
+								char ch = buffer[i];
+								if (ch != '\n') {
+									continue;
+								}
+								
+								String line = new String(buffer, startIndex, i - startIndex + 1);
+								startIndex = i + 1;
+								lastVersion = version.get();
+								
+								System.out.println("O1: " + LineStream.this);
+								printIndexes();
+								System.out.println("Return: " + line);
+								return line;
+							}
+							for (int i = 0; i < endIndex; i++) {
+								char ch = buffer[i];
+								if (ch != '\n') {
+									continue;
+								}
+								
+								String line
+										= new String(buffer, startIndex, buffer.length - startIndex)
+										+ new String(buffer, 0, i + 1);
+								startIndex = i + 1;
+								lastVersion = version.get();
+								
+								System.out.println("O2: " + LineStream.this);
+								printIndexes();
+								System.out.println("Return: " + line);
+								return line;
+							}
 						}
-						for (int i = 0; i < endIndex; i++) {
-							char ch = buffer[i];
-							if (ch != '\n') {
-								continue;
-							}
-							
-							String line
-									= new String(buffer, startIndex, buffer.length - startIndex)
-									+ new String(buffer, 0, i + 1);
-							startIndex = i + 1;
-							
-							System.out.println("O2: " + LineStream.this);
+					} else {
+						synchronized (this) {
+							System.out.println("Nm: " + LineStream.this);
 							printIndexes();
-							System.out.println("Return: " + line);
-							return line;
-						}
-					}
-				} else {
-					synchronized (this) {
-						System.out.println("Nm: " + LineStream.this);
-						printIndexes();
-						for (int i = startIndex; i < endIndex; i++) {
-							char ch = buffer[i];
-							if (ch != '\n') {
-								continue;
+							for (int i = startIndex; i < endIndex; i++) {
+								char ch = buffer[i];
+								if (ch != '\n') {
+									continue;
+								}
+								
+								String line = new String(buffer, startIndex, i - startIndex + 1);
+								startIndex = i + 1;
+								lastVersion = version.get();
+								
+								System.out.println("N1: " + LineStream.this);
+								printIndexes();
+								System.out.println("Return: " + line);
+								return line;
 							}
-							
-							String line = new String(buffer, startIndex, i - startIndex + 1);
-							startIndex = i + 1;
-							
-							System.out.println("N1: " + LineStream.this);
-							printIndexes();
-							System.out.println("Return: " + line);
-							return line;
 						}
 					}
 				}
@@ -234,6 +243,7 @@ public class LineStream {
 			
 			try {
 				Thread.sleep(1);
+				System.out.println("sleep");
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
