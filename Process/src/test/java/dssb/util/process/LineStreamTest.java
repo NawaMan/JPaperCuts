@@ -80,7 +80,7 @@ public class LineStreamTest {
 		long startTime = System.currentTimeMillis();
 		String line = lineStream.readLine(500);
 		assertEquals(theLine, line);
-		
+		System.out.println("---: " + (System.currentTimeMillis() - startTime));
 		long time = System.currentTimeMillis() - startTime;
 		assertEquals(5, time/100);
 	}

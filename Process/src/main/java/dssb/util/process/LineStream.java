@@ -14,6 +14,8 @@ public class LineStream {
 	private volatile int endIndex = 0;
 	private volatile boolean isDone = false;
 	
+	private final Object mutex = new Object();
+	
 	public LineStream(InputStream inStream) {
 		this.reader = new InputStreamReader(inStream);
 
@@ -74,6 +76,13 @@ public class LineStream {
 								System.out.println("F3: " + LineStream.this);
 							}
 							printIndexes();
+							if (isEndOfBuffer && (startIndex != 0)) {
+								continue;
+							}
+							synchronized (mutex) {
+								System.out.println("notify");
+								mutex.notifyAll();
+							}
 						}
 					}
 				} catch (IOException e) {
@@ -118,13 +127,6 @@ public class LineStream {
 					return null;
 				}
 				isOverflow = (endIndex < startIndex);
-			}
-
-			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 			
 			
@@ -226,6 +228,26 @@ public class LineStream {
 							return line;
 						}
 					}
+				}
+			}
+
+			
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			if (expireTime != Long.MAX_VALUE) {
+				try {
+					synchronized (mutex) {
+						System.out.println("wait");
+						mutex.wait(timeout);
+					}
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
 		}
