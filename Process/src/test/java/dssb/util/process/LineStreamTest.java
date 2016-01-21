@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 
 import java.io.ByteArrayInputStream;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class LineStreamTest {
@@ -68,6 +69,20 @@ public class LineStreamTest {
 		assertEquals(three, line);
 		line = lineStream.readLine();
 		assertEquals(four, line);
+	}
+
+	@Test
+	public void halfLineTimeout() {
+		String theLine = "Hello";
+		
+		ByteArrayInputStream bais = new ByteArrayInputStream(theLine.getBytes());
+		LineStream lineStream = new LineStream(bais);
+		long startTime = System.currentTimeMillis();
+		String line = lineStream.readLine(500);
+		assertEquals(theLine, line);
+		
+		long time = System.currentTimeMillis() - startTime;
+		assertEquals(5, time/100);
 	}
 
 }

@@ -104,6 +104,11 @@ public class LineStream {
 	}
 
 	public String readLine() {
+		return readLine(-1);
+	}
+
+	public String readLine(long timeout) {
+		long expireTime = (timeout < 0) ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
 		while (true) {
 			boolean isEmpty = false;
 			boolean isOverflow = false;
@@ -114,62 +119,112 @@ public class LineStream {
 				}
 				isOverflow = (endIndex < startIndex);
 			}
+
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			
 			if (isEmpty) {
-				continue;
-			}
-			if (isOverflow) {
-				synchronized (this) {
-					System.out.println("OF: " + LineStream.this);
-					printIndexes();
-					for (int i = startIndex; i < buffer.length; i++) {
-						char ch = buffer[i];
-						if (ch != '\n') {
-							continue;
-						}
-						
-						String line = new String(buffer, startIndex, i - startIndex + 1);
-						startIndex = i + 1;
-						
-						System.out.println("O1: " + LineStream.this);
-						printIndexes();
-						System.out.println("Return: " + line);
-						return line;
-					}
-					for (int i = 0; i < endIndex; i++) {
-						char ch = buffer[i];
-						if (ch != '\n') {
-							continue;
-						}
-						
-						String line
-								= new String(buffer, startIndex, buffer.length - startIndex)
-								+ new String(buffer, 0, i + 1);
-						startIndex = i + 1;
-						
-						System.out.println("O2: " + LineStream.this);
-						printIndexes();
-						System.out.println("Return: " + line);
-						return line;
+				if (expireTime != Long.MAX_VALUE) {
+					if (System.currentTimeMillis() > expireTime) {
+						System.out.println("Expired");
+						return "";
 					}
 				}
 			} else {
-				synchronized (this) {
-					System.out.println("NM: " + LineStream.this);
-					printIndexes();
-					for (int i = startIndex; i < endIndex; i++) {
-						char ch = buffer[i];
-						if (ch != '\n') {
-							continue;
+				if (expireTime != Long.MAX_VALUE) {
+					if (System.currentTimeMillis() > expireTime) {
+						System.out.println("Expired");
+						if (isOverflow) {
+							synchronized (this) {
+								System.out.println("OF: " + LineStream.this);
+								printIndexes();
+	
+								String line
+										= new String(buffer, startIndex, buffer.length - startIndex)
+										+ new String(buffer, 0, endIndex + 1);
+								startIndex = endIndex = 0;
+								
+								System.out.println("O3: " + LineStream.this);
+								printIndexes();
+								System.out.println("Return: " + line);
+								return line;
+							}
+						} else {
+							synchronized (this) {
+								System.out.println("NM: " + LineStream.this);
+								printIndexes();
+								
+								String line = new String(buffer, startIndex, endIndex - startIndex);
+								startIndex = endIndex = 0;
+								
+								System.out.println("N2: " + LineStream.this);
+								printIndexes();
+								System.out.println("Return: " + line);
+								return line;
+							}
 						}
-						
-						String line = new String(buffer, startIndex, i - startIndex + 1);
-						startIndex = i + 1;
-						
-						System.out.println("N1: " + LineStream.this);
+					}
+				}
+				
+				
+				if (isOverflow) {
+					synchronized (this) {
+						System.out.println("OF: " + LineStream.this);
 						printIndexes();
-						System.out.println("Return: " + line);
-						return line;
+						for (int i = startIndex; i < buffer.length; i++) {
+							char ch = buffer[i];
+							if (ch != '\n') {
+								continue;
+							}
+							
+							String line = new String(buffer, startIndex, i - startIndex + 1);
+							startIndex = i + 1;
+							
+							System.out.println("O1: " + LineStream.this);
+							printIndexes();
+							System.out.println("Return: " + line);
+							return line;
+						}
+						for (int i = 0; i < endIndex; i++) {
+							char ch = buffer[i];
+							if (ch != '\n') {
+								continue;
+							}
+							
+							String line
+									= new String(buffer, startIndex, buffer.length - startIndex)
+									+ new String(buffer, 0, i + 1);
+							startIndex = i + 1;
+							
+							System.out.println("O2: " + LineStream.this);
+							printIndexes();
+							System.out.println("Return: " + line);
+							return line;
+						}
+					}
+				} else {
+					synchronized (this) {
+						System.out.println("Nm: " + LineStream.this);
+						printIndexes();
+						for (int i = startIndex; i < endIndex; i++) {
+							char ch = buffer[i];
+							if (ch != '\n') {
+								continue;
+							}
+							
+							String line = new String(buffer, startIndex, i - startIndex + 1);
+							startIndex = i + 1;
+							
+							System.out.println("N1: " + LineStream.this);
+							printIndexes();
+							System.out.println("Return: " + line);
+							return line;
+						}
 					}
 				}
 			}
