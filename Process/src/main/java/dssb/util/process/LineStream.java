@@ -81,16 +81,22 @@ public class LineStream {
 							if (isEndOfBuffer && (startIndex != 0)) {
 								continue;
 							}
-							synchronized (mutex) {
-								System.out.println("notify");
-								mutex.notifyAll();
-								version.incrementAndGet();
-							}
+							notifyRead();
 						}
 					}
+
+					notifyRead();
 				} catch (IOException e) {
 					// TODO - Pass this on.
 					e.printStackTrace();
+				}
+			}
+
+			private void notifyRead() {
+				synchronized (mutex) {
+					System.out.println("notify");
+					mutex.notifyAll();
+					version.incrementAndGet();
 				}
 			}
 			
@@ -120,7 +126,8 @@ public class LineStream {
 	}
 
 	public String readLine(long timeout) {
-		long expireTime = (timeout < 0) ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
+		boolean hasExpireTime = (timeout >= 0);
+		long expireTime = hasExpireTime ? (System.currentTimeMillis() + timeout) : Long.MAX_VALUE;
 		int lastVersion = 0;
 		while (true) {
 			boolean isEmpty = false;
@@ -134,51 +141,49 @@ public class LineStream {
 			}
 			
 			if (isEmpty) {
-				if (expireTime != Long.MAX_VALUE) {
-					if (System.currentTimeMillis() > expireTime) {
+				if (hasExpireTime) {
+					if (isExpired(expireTime)) {
 						System.out.println("Expired");
 						return "";
 					}
 				}
 			} else {
-				if (expireTime != Long.MAX_VALUE) {
-					if (System.currentTimeMillis() > expireTime) {
-						System.out.println("Expired");
-						if (isOverflow) {
-							synchronized (this) {
-								System.out.println("OF: " + LineStream.this);
-								printIndexes();
-	
-								String line
-										= new String(buffer, startIndex, buffer.length - startIndex)
-										+ new String(buffer, 0, endIndex + 1);
-								startIndex = endIndex = 0;
-								lastVersion = version.get();
-								
-								System.out.println("O3: " + LineStream.this);
-								printIndexes();
-								System.out.println("Return: " + line);
-								return line;
-							}
-						} else {
-							synchronized (this) {
-								System.out.println("NM: " + LineStream.this);
-								printIndexes();
-								
-								String line = new String(buffer, startIndex, endIndex - startIndex);
-								startIndex = endIndex = 0;
-								lastVersion = version.get();
-								
-								System.out.println("N2: " + LineStream.this);
-								printIndexes();
-								System.out.println("Return: " + line);
-								return line;
-							}
+				if (isDone || (hasExpireTime && isExpired(expireTime))) {
+					System.out.println("Expired");
+					if (isOverflow) {
+						synchronized (this) {
+							System.out.println("OF: " + LineStream.this);
+							printIndexes();
+
+							String line
+									= new String(buffer, startIndex, buffer.length - startIndex)
+									+ new String(buffer, 0, endIndex);
+							startIndex = endIndex = 0;
+							lastVersion = version.get();
+							
+							System.out.println("O3: " + LineStream.this);
+							printIndexes();
+							System.out.println("Return: " + line);
+							return line;
+						}
+					} else {
+						synchronized (this) {
+							System.out.println("NM: " + LineStream.this);
+							printIndexes();
+							
+							String line = new String(buffer, startIndex, endIndex - startIndex);
+							startIndex = endIndex = 0;
+							lastVersion = version.get();
+							
+							System.out.println("N2: " + LineStream.this);
+							printIndexes();
+							System.out.println("Return: " + line);
+							return line;
 						}
 					}
 				}
 				
-				if (lastVersion != version.get()) {
+				if (isDone || (lastVersion != version.get())) {
 					if (isOverflow) {
 						synchronized (this) {
 							System.out.println("OF: " + LineStream.this);
@@ -240,27 +245,33 @@ public class LineStream {
 				}
 			}
 
-			
-			try {
-				Thread.sleep(1);
-				System.out.println("sleep");
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 
-			if (expireTime != Long.MAX_VALUE) {
+			if (!isDone) {
 				try {
-					synchronized (mutex) {
-						System.out.println("wait");
-						mutex.wait(timeout);
-					}
+					Thread.sleep(1);
+					System.out.println("sleep");
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+	
+				if (hasExpireTime) {
+					try {
+						synchronized (mutex) {
+							System.out.println("wait");
+							mutex.wait(timeout);
+						}
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 			}
 		}
+	}
+
+	private boolean isExpired(long expireTime) {
+		return System.currentTimeMillis() > expireTime;
 	}
 	
 	public String toString() {

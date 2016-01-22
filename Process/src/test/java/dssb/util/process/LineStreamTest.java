@@ -72,17 +72,17 @@ public class LineStreamTest {
 	}
 
 	@Test
-	public void halfLineTimeout() {
+	public void lastNonLineFinishWithNoWait() {
 		String theLine = "Hello";
 		
 		ByteArrayInputStream bais = new ByteArrayInputStream(theLine.getBytes());
 		LineStream lineStream = new LineStream(bais);
 		long startTime = System.currentTimeMillis();
-		String line = lineStream.readLine(500);
+		String line = lineStream.readLine();
 		assertEquals(theLine, line);
 		System.out.println("---: " + (System.currentTimeMillis() - startTime));
 		long time = System.currentTimeMillis() - startTime;
-		assertEquals(5, time/100);
+		assertEquals(0, time/100);
 	}
 
 }
