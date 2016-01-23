@@ -1,13 +1,9 @@
 package dssb.util.process;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
 
@@ -20,54 +16,34 @@ public class CharacterStreamTest {
 	
 	@Test
 	public void emptyInputStream() throws IOException {
-		String text = "";
-		char[] chars;
-		
-		CharacterStream charStream = new CharacterStream(streamOf(text));
-		
-		chars = new char[10];
-		assertEquals(0, charStream.read(chars, 0, 10));
-		assertEquals(text, new String(chars, 0, 0));
+		assertReadTexts("", 0);
 	}
 	
 	@Test
 	public void textSmallerThanBuffer() throws IOException {
-		String text = "01234";
-		char[] chars;
-		
-		CharacterStream charStream = new CharacterStream(streamOf(text));
-		
-		chars = new char[10];
-		assertEquals(5, charStream.read(chars, 0, 10));
-		assertEquals(text, new String(chars, 0, 5));
+		assertReadTexts("01234", 5);
 	}
 	
 	@Test
 	public void textSameSizeAsBuffer() throws IOException {
-		String text = "0123456789";
-		char[] chars;
-		
-		CharacterStream charStream = new CharacterStream(streamOf(text));
-		
-		chars = new char[10];
-		assertEquals(10, charStream.read(chars, 0, 10));
-		assertEquals(text, new String(chars, 0, 10));
+		assertReadTexts("0123456789", 10);
 	}
 	
 	@Test
 	public void textBiggerSizeAsBuffer() throws IOException {
-		String text = "0123456789ABCDE";
-		char[] chars;
-		
+		assertReadTexts("0123456789ABCDE", 10, 5);
+	}
+
+	private void assertReadTexts(String text, int ... lengths) throws IOException {
 		CharacterStream charStream = new CharacterStream(streamOf(text));
 		
-		chars = new char[10];
-		assertEquals(10, charStream.read(chars, 0, 10));
-		assertEquals(text.substring(0, 10), new String(chars, 0, 10));
-		
-		chars = new char[10];
-		assertEquals(5, charStream.read(chars, 0, 10));
-		assertEquals(text.substring(10, 10 + 5), new String(chars, 0, 5));
+		int offset = 0;
+		for (int length : lengths) {
+			char[] chars = new char[10];
+			assertEquals(length, charStream.read(chars, 0, 10));
+			assertEquals(text.substring(offset, offset + length), new String(chars, 0, length));
+			offset += length;
+		}
 	}
 
 }

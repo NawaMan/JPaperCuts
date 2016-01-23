@@ -7,7 +7,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
 
 public class CharacterStream {
 
