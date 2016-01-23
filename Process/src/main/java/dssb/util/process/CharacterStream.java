@@ -29,6 +29,8 @@ public class CharacterStream {
 			public void run() {
 				try {
 					while (!isDoneReading) {
+						
+						synchronized (this) {
 						if (startIndex <= endIndex) {
 							if (endIndex != charBuffer.length) {
 								byte[] bytes = new byte[10];
@@ -47,9 +49,10 @@ public class CharacterStream {
 									System.arraycopy(chars, 0, charBuffer, endIndex, position);
 									endIndex += position;
 									
-									printBuffer("FILL");
+									printBuffer("FIL1");
 								}
-							} else {
+							} else if (startIndex != 0) {
+								
 								byte[] bytes = new byte[10];
 								int count = inStream.read(bytes, 0, startIndex);
 								if (count == -1) {
@@ -66,11 +69,13 @@ public class CharacterStream {
 									System.arraycopy(chars, 0, charBuffer, 0, position);
 									endIndex = position;
 									
-									printBuffer("FILL");
+									printBuffer("FIL2");
 								}
 							}
 						} else {
-							throw new RuntimeException("Unimplemented branch.");
+							throw new RuntimeException("Unimplemented branch: startIndex=" + startIndex + " endIndex=" + endIndex);
+						}
+						
 						}
 
 						try {
@@ -93,18 +98,31 @@ public class CharacterStream {
 
 	public int read(char[] charArray, int start, int length) throws IOException {
 		while (!isDoneReading) {
+			synchronized (this) {
 			if (startIndex != endIndex) {
 				if (startIndex <= endIndex) {
 					System.arraycopy(charBuffer, startIndex, charArray, start, length);
 					int size = endIndex - startIndex;
 					startIndex = endIndex;
 					
-					printBuffer("PULL");
 					if (startIndex == charBuffer.length) {
 						startIndex = endIndex = 0;
 					}
+					
+					printBuffer("PUL1");
 					return size;
+				} else {
+					int size1 = charBuffer.length - startIndex;
+					int size2 = endIndex;
+					System.arraycopy(charBuffer, startIndex, charArray, start, size1);
+					System.arraycopy(charBuffer, 0,          charArray, size1, size2);
+					startIndex = endIndex = 0;
+					
+					printBuffer("PUL2");
+					return size1 + size2;
 				}
+			}
+			
 			}
 
 			try {
@@ -114,6 +132,32 @@ public class CharacterStream {
 				e.printStackTrace();
 			}
 		}
+		
+		synchronized (this) {
+		if (startIndex != endIndex) {
+			if (startIndex <= endIndex) {
+				System.arraycopy(charBuffer, startIndex, charArray, start, length);
+				int size = endIndex - startIndex;
+				startIndex = endIndex;
+				
+				printBuffer("PULL");
+				if (startIndex == charBuffer.length) {
+					startIndex = endIndex = 0;
+				}
+				return size;
+			} else {
+				int size1 = charBuffer.length - startIndex;
+				int size2 = endIndex;
+				System.arraycopy(charBuffer, startIndex, charArray, start, size1);
+				System.arraycopy(charBuffer, 0,          charArray, size1, size2);
+				startIndex = endIndex = 0;
+				
+				printBuffer("PULL");
+				return size1 + size2;
+			}
+		}
+		
+	}
 		return 0;
 	}
 
