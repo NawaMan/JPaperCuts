@@ -1,7 +1,7 @@
 package dssb.util.process;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.junit.Test;
 
@@ -14,7 +14,7 @@ public class CharStreamDecoderTest {
 		String original = "Hello World!";
 		String result = new String(buffer.take(original.getBytes()));
 		assertEquals(original, result);
-		assertTrue(buffer.hasRemainer());
+		assertFalse(buffer.hasRemainer());
 	}
 
 	@Test
@@ -34,7 +34,7 @@ public class CharStreamDecoderTest {
 		sb.append(buffer.take(part2));
 		sb.append(buffer.take(part3));
 		assertEquals(original, sb.toString());
-		assertTrue(buffer.hasRemainer());
+		assertFalse(buffer.hasRemainer());
 	}
 
 }

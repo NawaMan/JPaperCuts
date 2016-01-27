@@ -45,7 +45,7 @@ public class CharStreamDecoder {
 	}
 	
 	public boolean hasRemainer() {
-		return remainer == 0;
+		return remainer != 0;
 	}
 	
 	public byte[] getRemainerBytes() {
