@@ -6,26 +6,10 @@ import java.nio.charset.StandardCharsets;
 
 public class CharStreamDecoder {
 	
-	private final IncommingCharacterListener listener;
-	
-	public CharStreamDecoder(IncommingCharacterListener listener) {
-		this.listener = (listener != null) ? listener :  new IncommingCharacterListener() {
-			@Override
-			public void on(String str) {
-			}
-		};
-	}
-	
-	public static interface IncommingCharacterListener {
-		
-		public void on(String str);
-		
-	}
-	
 	private byte[] leftover = null;
 	private int remainer = 0;
 	
-	public void take(byte[] bytes) {
+	public char[] take(byte[] bytes) {
 		int inCount = remainer + bytes.length;
 		if (remainer != 0) {
 			if ((remainer + bytes.length) > leftover.length) {
@@ -45,7 +29,6 @@ public class CharStreamDecoder {
 		char[] decodedChars = new char[cb.position()];
 		cb.rewind();
 		cb.get(decodedChars, 0, decodedChars.length);
-		listener.on(new String(decodedChars));
 
 		if (bb.hasRemaining()) {
 			int remainer = bb.remaining();
@@ -58,7 +41,18 @@ public class CharStreamDecoder {
 			this.remainer = 0;
 		}
 				
-		
+		return decodedChars;
+	}
+	
+	public boolean hasRemainer() {
+		return remainer == 0;
+	}
+	
+	public byte[] getRemainerBytes() {
+		byte[] result = new byte[remainer];
+		System.arraycopy(leftover, 0, result, 0, remainer);
+		remainer = 0;
+		return result;
 	}
 	
 	
