@@ -3,6 +3,8 @@ package dssb.util.process;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Test;
 
 public class CharStreamDecoderTest {
@@ -19,7 +21,7 @@ public class CharStreamDecoderTest {
 
 	@Test
 	public void half() {
-		CharStreamDecoder buffer = new CharStreamDecoder();
+		CharStreamDecoder buffer = new CharStreamDecoder(StandardCharsets.UTF_8);
 		
 		String original = "ภาษาไทย";
 		byte[] full = original.getBytes();

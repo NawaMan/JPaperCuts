@@ -2,12 +2,23 @@ package dssb.util.process;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 public class CharStreamDecoder {
 	
 	private byte[] leftover = null;
 	private int remainer = 0;
+	
+	private Charset charset = StandardCharsets.UTF_8;
+	
+	public CharStreamDecoder() {
+		this(null);
+	}
+	
+	public CharStreamDecoder(Charset charset) {
+		this.charset = (charset != null) ? charset : Charset.defaultCharset();
+	}
 	
 	public char[] take(byte[] bytes) {
 		int inCount = remainer + bytes.length;
@@ -22,10 +33,12 @@ public class CharStreamDecoder {
 				bytes = leftover;
 			}
 		}
-		
+
+		// Is it done this way because I am too stupid (and no time) to read how the buffer really works.
+		// The buffer may already provide all I need to do this without the leftover and remainer.
 		ByteBuffer bb = ByteBuffer.wrap(bytes, 0, inCount);
 		CharBuffer cb = CharBuffer.allocate(bytes.length);
-		StandardCharsets.UTF_8.newDecoder().decode(bb, cb, true);
+		charset.newDecoder().decode(bb, cb, true);
 		char[] decodedChars = new char[cb.position()];
 		cb.rewind();
 		cb.get(decodedChars, 0, decodedChars.length);
