@@ -32,9 +32,16 @@ public class CharStreamDecoderTest {
 		System.arraycopy(full, part1.length,                part2, 0, part2.length);
 		System.arraycopy(full, part1.length + part2.length, part3, 0, part3.length);
 		StringBuffer sb = new StringBuffer();
+		
 		sb.append(buffer.take(part1));
+		assertEquals("ภ", sb.toString());
+		
 		sb.append(buffer.take(part2));
+		assertEquals("ภาษ", sb.toString());
+		
 		sb.append(buffer.take(part3));
+		assertEquals("ภาษาไทย", sb.toString());
+		
 		assertEquals(original, sb.toString());
 		assertFalse(buffer.hasRemainer());
 	}

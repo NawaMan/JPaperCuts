@@ -91,6 +91,7 @@ public class CharInputStream {
 		return cs;
 	}
 
+	// TODO - Move this elsewhere
 	private void runAsyn(Runnable runnable, long wait, boolean isAsyn) {
 		if (isAsyn) {
 			new Thread(runnable).start();
