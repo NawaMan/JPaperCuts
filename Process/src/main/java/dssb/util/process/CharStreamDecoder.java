@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class CharStreamDecoder {
 	
@@ -19,22 +20,46 @@ public class CharStreamDecoder {
 	public CharStreamDecoder(Charset charset) {
 		this.charset = (charset != null) ? charset : Charset.defaultCharset();
 	}
+
+	public void append(final byte ... bytes) {
+		if (bytes == null) {
+			return;
+		}
+		if (bytes.length == 0) {
+			return;
+		}
+		
+		synchronized (this) {
+			int byteLength = bytes.length;
+			int leftoverLength = (leftover != null) ? leftover.length : 0;
+			if ((remainer + byteLength) > leftoverLength) {
+				// The leftover array is too small, a bigger one is created.
+				byte[] temp = new byte[remainer + byteLength];
+				if (remainer != 0) {
+					System.arraycopy(leftover, 0, temp, 0, remainer);
+				}
+				leftover = temp;
+			}
+
+			if (byteLength == 1) {
+				leftover[remainer] = bytes[0];
+			} else {
+				System.arraycopy(bytes, 0, leftover, remainer, byteLength);
+			}
+			remainer += byteLength;
+		}
+	}
 	
-	public char[] take(byte[] bytes) {
+	public char[] take() {
 		CharBuffer cb = null;
 		synchronized (this) {
-			int inCount = remainer + bytes.length;
-			if (remainer != 0) {
-				bytes = prependLeftover(bytes);
-			}
-	
 			// Is it done this way because I am too stupid (and no time) to read how the buffer really works.
 			// The buffer may already provide all I need to do this without the leftover and remainer.
-			ByteBuffer bb = ByteBuffer.wrap(bytes, 0, inCount);
-			cb = CharBuffer.allocate(bytes.length);
+			ByteBuffer bb = ByteBuffer.wrap(leftover, 0, remainer);
+			cb = CharBuffer.allocate(leftover.length);
 			charset.newDecoder().decode(bb, cb, true);
 	
-			prepareLeftover(bytes, bb);
+			prepareLeftover(bb);
 		}
 
 		char[] decodedChars = new char[cb.position()];
@@ -43,27 +68,13 @@ public class CharStreamDecoder {
 		return decodedChars;
 	}
 
-	private byte[] prependLeftover(byte[] bytes) {
-		if ((remainer + bytes.length) > leftover.length) {
-			// The leftover array is too small, a bigger one is created to hold bothe the leftoever and the bytes.
-			byte[] temp = new byte[remainer + bytes.length];
-			System.arraycopy(leftover, 0, temp, 0,        remainer);
-			System.arraycopy(bytes,    0, temp, remainer, bytes.length);
-			return temp;
-		} else {
-			// Enough space in the leftover array, so move the bytes to appends the leftoever.
-			System.arraycopy(bytes, 0, leftover, remainer, bytes.length);
-			return leftover;
-		}
-	}
-
-	private void prepareLeftover(byte[] bytes, ByteBuffer bb) {
+	private void prepareLeftover(ByteBuffer bb) {
 		if (bb.hasRemaining()) {
 			int remainer = bb.remaining();
 			if ((leftover == null) || (leftover.length < remainer)) {
 				leftover = new byte[remainer + 4]; 	// Arbitrary now.
 			}
-			System.arraycopy(bytes, bytes.length - remainer, leftover, 0, remainer);
+			System.arraycopy(leftover, leftover.length - remainer, leftover, 0, remainer);
 			this.remainer = remainer;
 		} else {
 			this.remainer = 0;
@@ -83,6 +94,10 @@ public class CharStreamDecoder {
 			remainer = 0;
 			return result;
 		}
+	}
+	
+	public String toDetail() {
+		return "{ 'remainder': " + remainer +", 'leftover': '" + Arrays.toString(leftover) +"' }";
 	}
 	
 	

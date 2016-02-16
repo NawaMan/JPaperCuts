@@ -3,13 +3,15 @@ package dssb.util.process;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CharInputStream {
 	
 	private volatile InputStream inStream;
 	private volatile CharStreamDecoder decoder = new CharStreamDecoder();
-	private volatile StringBuffer buffer = new StringBuffer();
+	private volatile StringBuffer charBuffer = new StringBuffer();
 	
 	public CharInputStream(InputStream inStream) {
 		this.inStream = inStream;
@@ -25,8 +27,8 @@ public class CharInputStream {
 		} else {
 			count = (length - offset);
 			System.arraycopy(cs, 0, chars, offset, count);
-			synchronized (buffer) {
-				buffer.append(cs, offset + length, cs.length - count);
+			synchronized (charBuffer) {
+				charBuffer.append(cs, offset + length, cs.length - count);
 			}
 		}
 		return count;
@@ -41,6 +43,7 @@ public class CharInputStream {
 	}
 	
 	private char[] read(long wait, boolean isAsyn) throws IOException {
+		System.out.println("Read!");
 		if (isAsyn && (wait < 0)) {
 			return read(wait, false);
 		}
@@ -48,12 +51,13 @@ public class CharInputStream {
 		final AtomicReference<IOException> ioExceptionRef = new AtomicReference<IOException>();
 		final AtomicReference<RuntimeException> runtimeExceptionRef = new AtomicReference<RuntimeException>();
 		final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		final AtomicBoolean readStop = new AtomicBoolean(false);
 		
-		if (this.buffer.length() != 0) {
-			synchronized (this.buffer) {
-				if (this.buffer.length() != 0) {
-					buffer.write(this.buffer.toString().getBytes());
-					this.buffer.delete(0, this.buffer.length());
+		if (this.charBuffer.length() != 0) {
+			synchronized (this.charBuffer) {
+				if (this.charBuffer.length() != 0) {
+					buffer.write(this.charBuffer.toString().getBytes());
+					this.charBuffer.delete(0, this.charBuffer.length());
 				}
 			}
 		}
@@ -63,9 +67,14 @@ public class CharInputStream {
 			public void run() {
 				try {
 					int read;
-					while ((read = inStream.read()) != -1) {
+					while (!readStop.get() && ((read = inStream.read()) != -1)) {
+						System.out.println("read: " + read);
 						synchronized (buffer) {
-							buffer.write(read);
+							if (readStop.get()) {
+								decoder.append((byte)read);
+							} else {
+								buffer.write(read);
+							}
 						}
 					}
 				} catch (IOException e) {
@@ -76,6 +85,7 @@ public class CharInputStream {
 			}
 		};
 		runAsyn(runnable, wait, isAsyn);
+		readStop.set(true);
 		
 		if (ioExceptionRef.get() != null) {
 			throw ioExceptionRef.get();
@@ -86,7 +96,13 @@ public class CharInputStream {
 
 		char[] cs;
 		synchronized (buffer) {
-			cs = decoder.take(buffer.toByteArray());
+			System.out.println("Before take(): " + decoder.toDetail());
+			System.out.println("Before take(): " + Arrays.toString(buffer.toByteArray()));
+			decoder.append(buffer.toByteArray());
+			cs = decoder.take();
+			System.out.println("take(" + Arrays.toString(buffer.toByteArray()) + "): " + Arrays.toString(cs));
+			System.out.println("After take(): " + decoder.toDetail());
+			System.out.println("After take(): " + Arrays.toString(buffer.toByteArray()));
 		}
 		return cs;
 	}

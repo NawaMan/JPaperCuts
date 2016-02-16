@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class CharInputStreamTest {
@@ -93,31 +94,22 @@ public class CharInputStreamTest {
 	@Test
 	public void nonLatin_slow() throws IOException {
 		final byte[] bytes = "ครับ".getBytes();
-		final AtomicBoolean isWaiting = new AtomicBoolean(false);
+		System.out.println("First: " + Arrays.toString("ครับ".toCharArray()));
+		System.out.println("First: " + Arrays.toString("ครับ".getBytes()));
 
 		InputStream inStream = new InputStream() {
 			int index = 0;
 			@Override
 			public int read() throws IOException {
-				System.out.println("index: " + index);
-				if ((index != 0) && ((index % 5) == 4)) {
-					System.out.println("Five -> wait");
-					isWaiting.set(true);
-				}
-				while (isWaiting.get()) {
-					System.out.print("wait");
-					try {
-						Thread.sleep(5);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				System.out.println();
 				try {
-					System.out.println("return");
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				
+				try {
 					return bytes[index++];
 				} catch (ArrayIndexOutOfBoundsException e) {
-					System.out.println("done");
 					return -1;
 				}
 			}
@@ -129,34 +121,8 @@ public class CharInputStreamTest {
 		assertEquals("ค", new String(chars));
 		assertEquals(1, chars.length);
 		
-		while (isWaiting.get()) {
-			System.out.println("stop waiting");
-			isWaiting.set(false);
-		}
-		
 		chars = stream.read();
-		System.out.println("length: " + chars.length);
-		System.out.print("chars: ");
-		for (char ch : chars) {
-			System.out.print(Character.getNumericValue(ch));
-		}
-		System.out.println();
-		/*
 		assertEquals("รับ", new String(chars));
-		*/
-
-		while (isWaiting.get()) {
-			System.out.println("stop waiting");
-			isWaiting.set(false);
-		}
-		
-		chars = stream.read();
-		
-		try {
-			Thread.sleep(10000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
 	}
 
 }

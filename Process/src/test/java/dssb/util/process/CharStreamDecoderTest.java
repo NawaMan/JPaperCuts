@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -14,7 +15,8 @@ public class CharStreamDecoderTest {
 		CharStreamDecoder buffer = new CharStreamDecoder();
 		
 		String original = "Hello World!";
-		String result = new String(buffer.take(original.getBytes()));
+		buffer.append(original.getBytes());
+		String result = new String(buffer.take());
 		assertEquals(original, result);
 		assertFalse(buffer.hasRemainer());
 	}
@@ -33,17 +35,38 @@ public class CharStreamDecoderTest {
 		System.arraycopy(full, part1.length + part2.length, part3, 0, part3.length);
 		StringBuffer sb = new StringBuffer();
 		
-		sb.append(buffer.take(part1));
+		buffer.append(part1);
+		sb.append(buffer.take());
 		assertEquals("ภ", sb.toString());
 		
-		sb.append(buffer.take(part2));
+		buffer.append(part2);
+		sb.append(buffer.take());
 		assertEquals("ภาษ", sb.toString());
 		
-		sb.append(buffer.take(part3));
+		buffer.append(part3);
+		sb.append(buffer.take());
 		assertEquals("ภาษาไทย", sb.toString());
 		
 		assertEquals(original, sb.toString());
 		assertFalse(buffer.hasRemainer());
+	}
+
+	@Test
+	public void parts() {
+		CharStreamDecoder decoder = new CharStreamDecoder(StandardCharsets.UTF_8);
+		decoder.append(new byte[] { -32, -72, -124, -32 });
+		assertEquals("[ค]", Arrays.toString(decoder.take()));
+		assertEquals(
+				"After take(): { 'remainder': 1, 'leftover': '[-32, -72, -124, -32]' }",
+				"After take(): " + decoder.toDetail());
+		
+		decoder.append((byte)-72);
+
+		System.out.println("Before take(): " + decoder.toDetail());
+		decoder.append(new byte[] { -93, -32, -72, -79, -32, -72, -102 });
+		System.out.println(Arrays.toString(decoder.take()));
+		System.out.println(decoder.toDetail());
+
 	}
 
 }
