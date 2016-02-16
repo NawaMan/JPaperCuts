@@ -1,16 +1,11 @@
 package dssb.util.process;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class CharInputStreamTest {
@@ -94,9 +89,6 @@ public class CharInputStreamTest {
 	@Test
 	public void nonLatin_slow() throws IOException {
 		final byte[] bytes = "ครับ".getBytes();
-		System.out.println("First: " + Arrays.toString("ครับ".toCharArray()));
-		System.out.println("First: " + Arrays.toString("ครับ".getBytes()));
-
 		InputStream inStream = new InputStream() {
 			int index = 0;
 			@Override

@@ -3,17 +3,21 @@ package dssb.util.process;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CharInputStream {
 	
 	private volatile InputStream inStream;
-	private volatile CharStreamDecoder decoder = new CharStreamDecoder();
+	private volatile CharStreamDecoder decoder;
 	private volatile StringBuffer charBuffer = new StringBuffer();
 	
 	public CharInputStream(InputStream inStream) {
+		this(null, inStream);
+	}
+	
+	public CharInputStream(CharStreamDecoder decoder, InputStream inStream) {
+		this.decoder = (decoder != null) ? decoder : new CharStreamDecoder();
 		this.inStream = inStream;
 	}
 	
@@ -43,7 +47,6 @@ public class CharInputStream {
 	}
 	
 	private char[] read(long wait, boolean isAsyn) throws IOException {
-		System.out.println("Read!");
 		if (isAsyn && (wait < 0)) {
 			return read(wait, false);
 		}
@@ -68,7 +71,6 @@ public class CharInputStream {
 				try {
 					int read;
 					while (!readStop.get() && ((read = inStream.read()) != -1)) {
-						System.out.println("read: " + read);
 						synchronized (buffer) {
 							if (readStop.get()) {
 								decoder.append((byte)read);
@@ -96,13 +98,8 @@ public class CharInputStream {
 
 		char[] cs;
 		synchronized (buffer) {
-			System.out.println("Before take(): " + decoder.toDetail());
-			System.out.println("Before take(): " + Arrays.toString(buffer.toByteArray()));
 			decoder.append(buffer.toByteArray());
 			cs = decoder.take();
-			System.out.println("take(" + Arrays.toString(buffer.toByteArray()) + "): " + Arrays.toString(cs));
-			System.out.println("After take(): " + decoder.toDetail());
-			System.out.println("After take(): " + Arrays.toString(buffer.toByteArray()));
 		}
 		return cs;
 	}
