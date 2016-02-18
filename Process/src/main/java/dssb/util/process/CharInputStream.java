@@ -65,6 +65,7 @@ public class CharInputStream {
 			}
 		}
 		
+		// TODO - Add conditional stop.
 		Runnable runnable = new Runnable() {
 			@Override
 			public void run() {
@@ -108,6 +109,8 @@ public class CharInputStream {
 	private void runAsyn(Runnable runnable, long wait, boolean isAsyn) {
 		if (isAsyn) {
 			new Thread(runnable).start();
+			// This currently causes the read to wait for the "wait" time every time even when the char was read.
+			// TODO - Think about what is the appropriate behavior for this.
 			try {
 				Thread.sleep(wait);
 			} catch (InterruptedException e) {
