@@ -301,4 +301,28 @@ public class LineInputStreamTest {
 		assertEquals(NewlineType.CARRIAGE_RETURN_LINE_FEED, inStream.getNewlineType());
 	}
 	
+	// == Non Roman ====================================================================================================
+
+	
+	@Test
+	public void nonLatin() throws IOException {
+		// Given lines with LF in the second line and CR in the third line.
+		String orgText1 = "สวัสดี";
+		String orgText2 = "สบ\rายดี\nไหม";
+		String orgText3 = "แล้ว\n\rเจอกัน";
+		
+		// Create a text with CRLF as delimiter
+		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n" + orgText3 + "\r\n";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		
+		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		assertEquals(orgText3, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.CARRIAGE_RETURN_LINE_FEED, inStream.getNewlineType());
+	}
 }
