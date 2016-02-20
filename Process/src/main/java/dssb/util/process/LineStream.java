@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class LineStream {
 	
-	private final InputStreamReader reader;
+	private final CharInputStream inStream;
 	
 	private final char[] buffer = new char[10];//[4*1024];
 	
@@ -15,11 +15,12 @@ public class LineStream {
 	private volatile int endIndex = 0;
 	private volatile boolean isDone = false;
 	
-	private final Object mutex = new Object();
+	private final Object mutexRead = new Object();
+	private final Object mutexWrite = new Object();
 	private final AtomicInteger version = new AtomicInteger(0);
 	
-	public LineStream(InputStream inStream) {
-		this.reader = new InputStreamReader(inStream);
+	public LineStream(InputStream inputStream) {
+		this.inStream = new CharInputStream(inputStream);
 
 		new Thread(new Runnable() {
 			@Override
@@ -31,6 +32,7 @@ public class LineStream {
 							isFull1 = ((endIndex - startIndex) == buffer.length);
 						}
 						if (isFull1) {
+							cantWriteAnymoreSoWait();
 							continue;
 						}
 						
@@ -39,6 +41,7 @@ public class LineStream {
 							isFull2 = ((endIndex + 1) == startIndex);
 						}
 						if (isFull2) {
+							cantWriteAnymoreSoWait();
 							continue;
 						}
 						
@@ -60,7 +63,10 @@ public class LineStream {
 								accept = buffer.length - endIndex;
 							}
 						}
-						int count = reader.read(buffer, offset, accept);
+						
+						System.out.println("Start Read" + " offset: " + offset + ", accept: " + accept + " -- " + System.currentTimeMillis());
+						int count = inStream.read(buffer, offset, accept);
+						System.out.println("Done Read" + " offset: " + offset + ", accept: " + accept + " -- " + System.currentTimeMillis());
 
 						synchronized (LineStream.this) {
 							if (count == -1) {
@@ -69,13 +75,13 @@ public class LineStream {
 							}
 							if (isEndOfBuffer) {
 								endIndex = count;
-								System.out.println("F1: " + LineStream.this);
+								System.out.println("F1: " + LineStream.this + " -- " + System.currentTimeMillis());
 							} else if (isOverflowing) {
 								endIndex += count;
-								System.out.println("F2: " + LineStream.this);
+								System.out.println("F2: " + LineStream.this + " -- " + System.currentTimeMillis());
 							} else {
 								endIndex += count;
-								System.out.println("F3: " + LineStream.this);
+								System.out.println("F3: " + LineStream.this + " -- " + System.currentTimeMillis());
 							}
 							printIndexes();
 							if (isEndOfBuffer && (startIndex != 0)) {
@@ -93,9 +99,9 @@ public class LineStream {
 			}
 
 			private void notifyRead() {
-				synchronized (mutex) {
-					System.out.println("notify");
-					mutex.notifyAll();
+				synchronized (mutexRead) {
+					System.out.println("notify" + " -- " + System.currentTimeMillis());
+					mutexRead.notifyAll();
 					version.incrementAndGet();
 				}
 			}
@@ -118,7 +124,7 @@ public class LineStream {
 				System.out.print(" ");
 			}
 		}
-		System.out.println();
+		System.out.println(" -- " + System.currentTimeMillis());
 	}
 
 	public String readLine() {
@@ -143,16 +149,16 @@ public class LineStream {
 			if (isEmpty) {
 				if (hasExpireTime) {
 					if (isExpired(expireTime)) {
-						System.out.println("Expired");
+						System.out.println("Expired" + " -- " + System.currentTimeMillis());
 						return "";
 					}
 				}
 			} else {
 				if (isDone || (hasExpireTime && isExpired(expireTime))) {
-					System.out.println("Expired");
+					System.out.println("Expired" + " -- " + System.currentTimeMillis());
 					if (isOverflow) {
 						synchronized (this) {
-							System.out.println("OF: " + LineStream.this);
+							System.out.println("OF: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
 
 							String line
@@ -161,23 +167,29 @@ public class LineStream {
 							startIndex = endIndex = 0;
 							lastVersion = version.get();
 							
-							System.out.println("O3: " + LineStream.this);
+							System.out.println("O3: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
-							System.out.println("Return: " + line);
+							System.out.println("Return: " + line + " -- " + System.currentTimeMillis());
+							synchronized (mutexWrite) {
+								mutexWrite.notifyAll();
+							}
 							return line;
 						}
 					} else {
 						synchronized (this) {
-							System.out.println("NM: " + LineStream.this);
+							System.out.println("NM: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
 							
 							String line = new String(buffer, startIndex, endIndex - startIndex);
 							startIndex = endIndex = 0;
 							lastVersion = version.get();
 							
-							System.out.println("N2: " + LineStream.this);
+							System.out.println("N2: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
-							System.out.println("Return: " + line);
+							System.out.println("Return: " + line + " -- " + System.currentTimeMillis());
+							synchronized (mutexWrite) {
+								mutexWrite.notifyAll();
+							}
 							return line;
 						}
 					}
@@ -186,7 +198,7 @@ public class LineStream {
 				if (isDone || (lastVersion != version.get())) {
 					if (isOverflow) {
 						synchronized (this) {
-							System.out.println("OF: " + LineStream.this);
+							System.out.println("OF: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
 							for (int i = startIndex; i < buffer.length; i++) {
 								char ch = buffer[i];
@@ -198,9 +210,12 @@ public class LineStream {
 								startIndex = i + 1;
 								lastVersion = version.get();
 								
-								System.out.println("O1: " + LineStream.this);
+								System.out.println("O1: " + LineStream.this + " -- " + System.currentTimeMillis());
 								printIndexes();
-								System.out.println("Return: " + line);
+								System.out.println("Return: " + line + " -- " + System.currentTimeMillis());
+								synchronized (mutexWrite) {
+									mutexWrite.notifyAll();
+								}
 								return line;
 							}
 							for (int i = 0; i < endIndex; i++) {
@@ -215,15 +230,18 @@ public class LineStream {
 								startIndex = i + 1;
 								lastVersion = version.get();
 								
-								System.out.println("O2: " + LineStream.this);
+								System.out.println("O2: " + LineStream.this + " -- " + System.currentTimeMillis());
 								printIndexes();
-								System.out.println("Return: " + line);
+								System.out.println("Return: " + line + " -- " + System.currentTimeMillis());
+								synchronized (mutexWrite) {
+									mutexWrite.notifyAll();
+								}
 								return line;
 							}
 						}
 					} else {
 						synchronized (this) {
-							System.out.println("Nm: " + LineStream.this);
+							System.out.println("Nm: " + LineStream.this + " -- " + System.currentTimeMillis());
 							printIndexes();
 							for (int i = startIndex; i < endIndex; i++) {
 								char ch = buffer[i];
@@ -235,9 +253,12 @@ public class LineStream {
 								startIndex = i + 1;
 								lastVersion = version.get();
 								
-								System.out.println("N1: " + LineStream.this);
+								System.out.println("N1: " + LineStream.this + " -- " + System.currentTimeMillis());
 								printIndexes();
-								System.out.println("Return: " + line);
+								System.out.println("Return: " + line + " -- " + System.currentTimeMillis());
+								synchronized (mutexWrite) {
+									mutexWrite.notifyAll();
+								}
 								return line;
 							}
 						}
@@ -249,7 +270,7 @@ public class LineStream {
 			if (!isDone) {
 				try {
 					Thread.sleep(1);
-					System.out.println("sleep");
+//					System.out.println("sleep" + " -- " + System.currentTimeMillis());
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -257,9 +278,9 @@ public class LineStream {
 	
 				if (hasExpireTime) {
 					try {
-						synchronized (mutex) {
-							System.out.println("wait");
-							mutex.wait(timeout);
+						synchronized (mutexRead) {
+							System.out.println("wait" + " -- " + System.currentTimeMillis());
+							mutexRead.wait(timeout);
 						}
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
@@ -303,6 +324,17 @@ public class LineStream {
 			}
 			buff.append(']');
 			return buff.toString();
+		}
+	}
+
+	private void cantWriteAnymoreSoWait() {
+		synchronized (mutexWrite) {
+			try {
+				mutexWrite.wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	

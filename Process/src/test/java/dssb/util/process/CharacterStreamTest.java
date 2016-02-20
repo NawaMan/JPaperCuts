@@ -3,6 +3,7 @@ package dssb.util.process;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -51,6 +52,13 @@ public class CharacterStreamTest {
 	@Test
 	public void nonLatin_small() throws Exception {
 		assertReadTexts("งง", 2);
+	}
+	
+	@Test
+	public void nonLatin_medium() throws Exception {
+		System.out.println(Arrays.toString("ครับ".getBytes()));
+		assertReadTexts("ครับ", 4);
+		Thread.sleep(100000);
 	}
 
 	private void assertReadTexts(String text, int ... lengths) throws Exception {

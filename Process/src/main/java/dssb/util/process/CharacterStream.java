@@ -7,16 +7,18 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class CharacterStream {
 
 	private final InputStream inStream;
 	
-	//private final byte[] byteBuffer = new byte[10];
-	private final char[] charBuffer = new char[10];
+	private volatile byte[] byteBuffer = new byte[10];
+	private final    char[] charBuffer = new char[10];
 	
 	private volatile int startIndex = 0;
 	private volatile int endIndex = 0;
+	private volatile int remainer = 0;
 	private volatile boolean isDoneReading = false;
 
 	private final CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder();
@@ -33,34 +35,43 @@ public class CharacterStream {
 						synchronized (this) {
 						if (startIndex <= endIndex) {
 							if (endIndex != charBuffer.length) {
-								byte[] bytes = new byte[10];
-								int count = inStream.read(bytes, startIndex, 10 - endIndex);
+								System.out.println(Arrays.toString(byteBuffer));
+								System.out.println("inStream.read: " + remainer + ","  + (byteBuffer.length - remainer));
+								int count = inStream.read(byteBuffer, remainer, byteBuffer.length - remainer);
+								System.out.println("F1" + Arrays.toString(byteBuffer));
 								if (count == -1) {
 									isDoneReading = true;
 									return;
 								}
 		
-								ByteBuffer bb = ByteBuffer.wrap(bytes, 0, count);
+								ByteBuffer bb = ByteBuffer.wrap(byteBuffer, 0, count);
 								CharBuffer cb = CharBuffer.allocate(1024);
 								CoderResult result = decoder.decode(bb, cb, false);
 								if (!result.isOverflow()) {
 									char[] chars = cb.array();
 									int position = cb.position();
 									System.arraycopy(chars, 0, charBuffer, endIndex, position);
-									endIndex += position;
+									System.out.println(endIndex+ " vs " + position);
+									endIndex = endIndex + position;
 									
 									printBuffer("FIL1");
+									
+									if (bb.hasRemaining()) {
+										remainer = bb.remaining();
+										byte[] bytes = new byte[10];
+										System.arraycopy(byteBuffer, bb.position(), bytes, 0, remainer);
+										byteBuffer = bytes;
+									}
 								}
 							} else if (startIndex != 0) {
-								
-								byte[] bytes = new byte[10];
-								int count = inStream.read(bytes, 0, startIndex);
+								int count = inStream.read(byteBuffer, remainer, byteBuffer.length - remainer);
+								System.out.println("F2" + Arrays.toString(byteBuffer));
 								if (count == -1) {
 									isDoneReading = true;
 									return;
 								}
 		
-								ByteBuffer bb = ByteBuffer.wrap(bytes, 0, count);
+								ByteBuffer bb = ByteBuffer.wrap(byteBuffer, 0, count);
 								CharBuffer cb = CharBuffer.allocate(1024);
 								CoderResult result = decoder.decode(bb, cb, false);
 								if (!result.isOverflow()) {
@@ -70,6 +81,13 @@ public class CharacterStream {
 									endIndex = position;
 									
 									printBuffer("FIL2");
+									
+									if (bb.hasRemaining()) {
+										remainer = bb.remaining();
+										byte[] bytes = new byte[10];
+										System.arraycopy(byteBuffer, bb.position(), bytes, 0, remainer);
+										byteBuffer = bytes;
+									}
 								}
 							}
 						} else {
@@ -97,11 +115,12 @@ public class CharacterStream {
 	}
 
 	public int read(char[] charArray, int start, int length) throws IOException {
+		int total = 0;
 		while (!isDoneReading) {
 			synchronized (this) {
 			if (startIndex != endIndex) {
 				if (startIndex <= endIndex) {
-					System.arraycopy(charBuffer, startIndex, charArray, start, length);
+					System.arraycopy(charBuffer, startIndex, charArray, start, length - total);
 					int size = endIndex - startIndex;
 					startIndex = endIndex;
 					
@@ -110,7 +129,10 @@ public class CharacterStream {
 					}
 					
 					printBuffer("PUL1");
-					return size;
+					total += size;
+					if (total == length) {
+						return total;
+					}
 				} else {
 					int size1 = charBuffer.length - startIndex;
 					int size2 = endIndex;
@@ -119,7 +141,10 @@ public class CharacterStream {
 					startIndex = endIndex = 0;
 					
 					printBuffer("PUL2");
-					return size1 + size2;
+					total += size1 + size2;
+					if (total == length) {
+						return total;
+					}
 				}
 			}
 			
@@ -136,7 +161,7 @@ public class CharacterStream {
 		synchronized (this) {
 		if (startIndex != endIndex) {
 			if (startIndex <= endIndex) {
-				System.arraycopy(charBuffer, startIndex, charArray, start, length);
+				System.arraycopy(charBuffer, startIndex, charArray, start, length - total);
 				int size = endIndex - startIndex;
 				startIndex = endIndex;
 				

@@ -69,8 +69,9 @@ public class Process {
 			InputStream inStream = (i == 0) ? process.getInputStream() : process.getErrorStream();
 			Object      handler  = (i == 0) ? outHandler               : errHandler;
 			if (handler instanceof LineOutputHandler) {
-				final LineOutputHandler lineHandler = (LineOutputHandler) handler;
-				Thread thread = prepareLineThread(inStream, lineHandler);
+				LineOutputHandler lineHandler = (LineOutputHandler) handler;
+				Runnable          runnable    = new LineReadRunnable(inStream, lineHandler);
+				Thread            thread      = new Thread(runnable);
 				thread.start();
 			}
 		}
@@ -78,30 +79,6 @@ public class Process {
 		int exitCode = process.waitFor();
 		return exitCode;
 	}
-
-	private Thread prepareLineThread(final InputStream inStream, final LineOutputHandler out) {
-		return new Thread(new Runnable() {
-			@Override
-			public void run() {
-				InputStreamReader reader = new InputStreamReader(inStream);
-				BufferedReader bufferd = new BufferedReader(reader);
-
-				while (true) {
-					String line = null;
-					try {
-						line = bufferd.readLine();
-					} catch (IOException e) {
-						// TODO - Deal with this
-						e.printStackTrace();
-					}
-					if (line == null) {
-						break;
-					}
-
-					out.handleLine(line);
-				}
-			}
-		});
-	}
+	
 
 }
