@@ -43,7 +43,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLine.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LF, source);
+		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText, inStream.readLine());
@@ -60,7 +60,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LF, source);
+		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -79,7 +79,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LF, source);
+		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -101,7 +101,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CR, source);
+		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -122,7 +122,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CR, source);
+		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN, source);
 		
 		// We will get the original lines with the LFs inside them.
 		assertEquals(orgText1, inStream.readLine());
@@ -135,12 +135,16 @@ public class LineInputStreamTest {
 	
 	@Test
 	public void readTwoLines_CRLF() throws IOException {
+		// Given lines.
 		String orgText1 = "Hello";
 		String orgText2 = "There";
-		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n";
 		
+		// Create a text with CRLF as delimiter
+		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n";
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
-		LineInputStream inStream = new LineInputStream(NewlineType.CRLF, source);
+		
+		// Read it with CRLF as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN_LINE_FEED, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -153,12 +157,16 @@ public class LineInputStreamTest {
 	
 	@Test
 	public void readTwoLines_CRLF_withCR_orLF() throws IOException {
+		// Given lines with either CR or LF in it.
 		String orgText1 = "He\rl\nlo";
 		String orgText2 = "Th\n\rere";
-		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n";
 		
+		// Create a text with CRLF as delimiter
+		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n";
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
-		LineInputStream inStream = new LineInputStream(NewlineType.CRLF, source);
+		
+		// Read it with CRLF as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN_LINE_FEED, source);
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -167,6 +175,130 @@ public class LineInputStreamTest {
 		assertEquals(null, inStream.readLine());
 		// ... check that no more the left over.
 		assertEquals("", inStream.getLeftOver());
+	}
+	
+	// == To be determined ============================================================================================
+	
+	@Test
+	public void toBeDetermined_LF() throws IOException {
+		// Given lines.
+		String orgText1 = "Hello";
+		String orgText2 = "There";
+		
+		// Create a text with LF as delimiter
+		String orgLines = orgText1 + "\n" + orgText2 + "\n";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+
+		// We will get the original lines.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.LINE_FEED, inStream.getNewlineType());
+	}
+	
+	@Test
+	public void toBeDetermined_LF_followedByCR() throws IOException {
+		// Given lines with CR in the second line.
+		String orgText1 = "Hello";
+		String orgText2 = "The\rre";
+		
+		// Create a text with LF as delimiter
+		String orgLines = orgText1 + "\n" + orgText2 + "\n";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+
+		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.LINE_FEED, inStream.getNewlineType());
+	}
+
+	@Test
+	public void toBeDetermined_CR() throws IOException {
+		// Given lines.
+		String orgText1 = "Hello";
+		String orgText2 = "There";
+		
+		// Create a text with LF as delimiter
+		String orgLines = orgText1 + "\r" + orgText2 + "\r";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		
+		// We will get the original lines.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.CARRIAGE_RETURN, inStream.getNewlineType());
+	}
+	
+	@Test
+	public void toBeDetermined_CR_followedByLF() throws IOException {
+		// Given lines with LF in the second line.
+		String orgText1 = "Hello";
+		String orgText2 = "The\nre";
+		
+		// Create a text with LF as delimiter
+		String orgLines = orgText1 + "\r" + orgText2 + "\r";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		
+		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.CARRIAGE_RETURN, inStream.getNewlineType());
+	}
+
+	@Test
+	public void toBeDetermined_CRLF() throws IOException {
+		// Given lines.
+		String orgText1 = "Hello";
+		String orgText2 = "There";
+		
+		// Create a text with LF as delimiter
+		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		
+		// We will get the original lines.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.CARRIAGE_RETURN_LINE_FEED, inStream.getNewlineType());
+	}
+	
+	@Test
+	public void toBeDetermined_CRLF_followedByCR_orLF() throws IOException {
+		// Given lines with LF in the second line and CR in the third line.
+		String orgText1 = "Hello";
+		String orgText2 = "The\nre";
+		String orgText3 = "The\rre";
+		
+		// Create a text with CRLF as delimiter
+		String orgLines = orgText1 + "\r\n" + orgText2 + "\r\n" + orgText3 + "\r\n";
+		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
+		
+		// Read it with ToBeDetermine as a new line.
+		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		
+		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		assertEquals(orgText1, inStream.readLine());
+		assertEquals(orgText2, inStream.readLine());
+		assertEquals(orgText3, inStream.readLine());
+		// This become a newline line input stream
+		assertEquals(NewlineType.CARRIAGE_RETURN_LINE_FEED, inStream.getNewlineType());
 	}
 	
 }
