@@ -24,7 +24,6 @@ public class LineInputStream {
 		
 	}
 	
-
 	private final InputStream source;
 	
 	private final CharStreamDecoder decoder;
@@ -32,16 +31,17 @@ public class LineInputStream {
 	private volatile NewlineType nlType;
 	
 	private volatile String leftOver = "";
-
+	
 	public LineInputStream(InputStream source) {
 		this(null, null, source);
 	}
-
+	
 	public LineInputStream(NewlineType nlType, InputStream source) {
-		this(null, null, source);
+		this(null, nlType, source);
 	}
 	
-	public LineInputStream(CharStreamDecoder decoder, NewlineType nlType, InputStream source) {
+	public LineInputStream(CharStreamDecoder decoder, NewlineType nlType,
+	        InputStream source) {
 		if (source == null) {
 			throw new NullPointerException();
 		}
@@ -73,22 +73,28 @@ public class LineInputStream {
 		
 		return NewlineType.UNKNOWN;
 	}
-
+	
 	public String readLine() throws IOException {
 		if (nlType == NewlineType.LF) {
-			return readLine_LF();
+			return readLine('\n');
+		}
+		if (nlType == NewlineType.CR) {
+			return readLine('\r');
+		}
+		if (nlType == NewlineType.CRLF) {
+			return readLine_CRLF();
 		}
 		throw new UnsupportedOperationException();
 	}
 	
-	private String readLine_LF() throws IOException {
+	private String readLine(char newLineChar) throws IOException {
 		StringBuffer line = new StringBuffer();
 		int read;
 		while ((read = source.read()) != -1) {
-			char[] chars = decoder.take((byte)read);
+			char[] chars = decoder.take((byte) read);
 			for (int i = 0; i < chars.length; i++) {
 				char ch = chars[i];
-				if (ch == '\n') {
+				if (ch == newLineChar) {
 					return line.toString();
 				} else {
 					line.append(ch);
@@ -99,9 +105,38 @@ public class LineInputStream {
 		leftOver = line.toString();
 		return null;
 	}
-
+	
+	private String readLine_CRLF() throws IOException {
+		StringBuffer line = new StringBuffer();
+		int read;
+		boolean wasCR = false;
+		while ((read = source.read()) != -1) {
+			char[] chars = decoder.take((byte) read);
+			for (int i = 0; i < chars.length; i++) {
+				char ch = chars[i];
+				if (ch == '\r') {
+					wasCR = true;
+				} else {
+					if (wasCR) {
+						if (ch == '\n') {
+							return line.toString();
+						} else {
+							line.append('\r').append(ch);
+						}
+					} else {
+						line.append(ch);
+					}
+					wasCR = false;
+				}
+			}
+		}
+		
+		leftOver = line.toString();
+		return null;
+	}
+	
 	public String getLeftOver() {
 		return leftOver;
 	}
-
+	
 }
