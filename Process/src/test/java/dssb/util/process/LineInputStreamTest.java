@@ -87,7 +87,7 @@ public class LineInputStreamTest {
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
 		// ... check the left over.
-		assertEquals(orgText3, inStream.getLeftOver());
+		assertEquals(orgText3, inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -109,7 +109,7 @@ public class LineInputStreamTest {
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
 		// ... check that no more the left over.
-		assertEquals("", inStream.getLeftOver());
+		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -130,7 +130,7 @@ public class LineInputStreamTest {
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
 		// ... check that no more the left over.
-		assertEquals("", inStream.getLeftOver());
+		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -152,7 +152,7 @@ public class LineInputStreamTest {
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
 		// ... check that no more the left over.
-		assertEquals("", inStream.getLeftOver());
+		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -174,7 +174,7 @@ public class LineInputStreamTest {
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
 		// ... check that no more the left over.
-		assertEquals("", inStream.getLeftOver());
+		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	// == To be determined ============================================================================================

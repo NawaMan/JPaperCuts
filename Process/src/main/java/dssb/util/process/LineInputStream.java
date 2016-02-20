@@ -178,7 +178,7 @@ public class LineInputStream {
 		return null;
 	}
 	
-	public String getLeftOver() {
+	public String peekLeftOver() {
 		return leftOver;
 	}
 	
