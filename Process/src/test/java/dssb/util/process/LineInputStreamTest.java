@@ -13,6 +13,27 @@ import dssb.util.process.LineInputStream.NewlineType;
 public class LineInputStreamTest {
 	
 	@Test
+	public void unknownNewlineIsNotSupported() throws IOException {
+		InputStream source = new ByteArrayInputStream("".getBytes());
+		try {
+			new LineInputStream(NewlineType.UNKNOWN, source);
+			fail("Expect an exception!");
+		} catch(IllegalArgumentException exception) {
+			assertEquals(LineInputStream.UNKNOWN_NOT_SUPPORT, exception.getMessage());
+		}
+	}
+	
+	@Test
+	public void nullSource() throws IOException {
+		try {
+			new LineInputStream(null);
+			fail("Expect an exception!");
+		} catch(NullPointerException exception) {
+			assertEquals(LineInputStream.NULL_SOURCE, exception.getMessage());
+		}
+	}
+	
+	@Test
 	public void readSimpleLine() throws IOException {
 		// Given lines.
 		String orgText = "Hello";

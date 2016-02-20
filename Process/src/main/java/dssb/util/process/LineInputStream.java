@@ -5,6 +5,11 @@ import java.io.InputStream;
 
 public class LineInputStream {
 	
+	public static final String NULL_SOURCE = "The source input stream cannot be null.";
+
+	public static final String UNKNOWN_NOT_SUPPORT = "UNKNOWN newline type is not supported.";
+	
+	
 	public static enum NewlineType {
 		
 		/** Linefeed ('\n') only. */
@@ -43,7 +48,7 @@ public class LineInputStream {
 	public LineInputStream(CharStreamDecoder decoder, NewlineType nlType,
 	        InputStream source) {
 		if (source == null) {
-			throw new NullPointerException();
+			throw new NullPointerException(NULL_SOURCE);
 		}
 		
 		this.decoder = (decoder != null) ? decoder : new CharStreamDecoder();
@@ -52,6 +57,10 @@ public class LineInputStream {
 		
 		if (this.nlType == null) {
 			this.nlType = getSystemNewlineType();
+		}
+		
+		if (this.nlType == NewlineType.UNKNOWN) {
+			throw new IllegalArgumentException(UNKNOWN_NOT_SUPPORT);
 		}
 	}
 	
