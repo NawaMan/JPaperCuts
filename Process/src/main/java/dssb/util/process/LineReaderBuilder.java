@@ -3,27 +3,27 @@ package dssb.util.process;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
-public class LineInputStreamBuilder {
+public class LineReaderBuilder {
 	
 	private NewlineType nlType = NewlineType.TO_BE_DETERMINED;
 	private CharIterator charIterator;
 	
-	public LineInputStreamBuilder(InputStream source) {
+	public LineReaderBuilder(InputStream source) {
 		this(new InputStreamCharIterator(source, null));
 	}
 	
-	public LineInputStreamBuilder(CharStreamDecoder decoder, InputStream source) {
+	public LineReaderBuilder(CharStreamDecoder decoder, InputStream source) {
 		this(new InputStreamCharIterator(source, decoder));
 	}
 	
-	public LineInputStreamBuilder(CharIterator charIterator) {
+	public LineReaderBuilder(CharIterator charIterator) {
 		this.charIterator = charIterator;
 		if (this.charIterator == null) {
-			throw new NullPointerException(LineInputStream.NULL_SOURCE);
+			throw new NullPointerException(LineReader.NULL_SOURCE);
 		}
 	}
 	
-	public LineInputStreamBuilder decoder(CharStreamDecoder decoder) {
+	public LineReaderBuilder decoder(CharStreamDecoder decoder) {
 		if (!(charIterator instanceof InputStreamCharIterator)) {
 			String message = "The CharInterator was not an InputStreamCharIterator so its decoder can't be chagned.";
 			throw new IllegalStateException(message);
@@ -34,7 +34,7 @@ public class LineInputStreamBuilder {
 		return this;
 	}
 	
-	public LineInputStreamBuilder charset(Charset charset) {
+	public LineReaderBuilder charset(Charset charset) {
 		if (!(charIterator instanceof InputStreamCharIterator)) {
 			String message = "The CharInterator was not an InputStreamCharIterator so its decoder charset can't be chagned.";
 			throw new IllegalStateException(message);
@@ -48,63 +48,63 @@ public class LineInputStreamBuilder {
 		return this;
 	}
 	
-	public LineInputStreamBuilder newlineType(NewlineType nlType) {
+	public LineReaderBuilder newlineType(NewlineType nlType) {
 		this.nlType = nlType;
 		return this;
 	}
 	
-	public LineInputStreamBuilder linefeed() {
+	public LineReaderBuilder linefeed() {
 		newlineType(NewlineType.LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder carriageReturn() {
+	public LineReaderBuilder carriageReturn() {
 		newlineType(NewlineType.CARRIAGE_RETURN);
 		return this;
 	}
 	
-	public LineInputStreamBuilder carriageReturnThenLinefeed() {
+	public LineReaderBuilder carriageReturnThenLinefeed() {
 		newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder toBeDetermined() {
+	public LineReaderBuilder toBeDetermined() {
 		newlineType(NewlineType.TO_BE_DETERMINED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder unix() {
+	public LineReaderBuilder unix() {
 		newlineType(NewlineType.LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder mac() {
+	public LineReaderBuilder mac() {
 		newlineType(NewlineType.CARRIAGE_RETURN);
 		return this;
 	}
 	
-	public LineInputStreamBuilder windows() {
+	public LineReaderBuilder windows() {
 		newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder lf() {
+	public LineReaderBuilder lf() {
 		newlineType(NewlineType.LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStreamBuilder cr() {
+	public LineReaderBuilder cr() {
 		newlineType(NewlineType.CARRIAGE_RETURN);
 		return this;
 	}
 	
-	public LineInputStreamBuilder crlf() {
+	public LineReaderBuilder crlf() {
 		newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
 		return this;
 	}
 	
-	public LineInputStream build() {
-		return new LineInputStream(nlType, charIterator);
+	public LineReader build() {
+		return new LineReader(nlType, charIterator);
 	}
 	
 }

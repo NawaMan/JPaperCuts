@@ -1,6 +1,6 @@
 package dssb.util.process;
 
-public class ReadLineTimeoutException extends LineInputStreamException {
+public class ReadLineTimeoutException extends LineReaderException {
 	
 	/** */
 	private static final long serialVersionUID = -6152198069546709271L;

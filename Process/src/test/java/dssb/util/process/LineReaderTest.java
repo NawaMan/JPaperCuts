@@ -10,29 +10,29 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
-public class LineInputStreamTest {
+public class LineReaderTest {
 	
 	@Test
 	public void unknownNewlineIsNotSupported() throws IOException {
 		InputStream source = new ByteArrayInputStream("".getBytes());
 		try {
-			new LineInputStreamBuilder(source)
+			new LineReaderBuilder(source)
 			        .newlineType(NewlineType.UNKNOWN)
 			        .build();
 			fail("Expect an exception!");
 		} catch (IllegalArgumentException exception) {
-			assertEquals(LineInputStream.UNKNOWN_NOT_SUPPORT, exception.getMessage());
+			assertEquals(LineReader.UNKNOWN_NOT_SUPPORT, exception.getMessage());
 		}
 	}
 	
 	@Test
 	public void nullSource() throws IOException {
 		try {
-			new LineInputStreamBuilder((CharIterator) null)
+			new LineReaderBuilder((CharIterator) null)
 			        .build();
 			fail("Expect an exception!");
 		} catch (NullPointerException exception) {
-			assertEquals(LineInputStream.NULL_SOURCE, exception.getMessage());
+			assertEquals(LineReader.NULL_SOURCE, exception.getMessage());
 		}
 	}
 	
@@ -43,7 +43,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgText.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .build();
 		
 		// We will get the original lines.
@@ -60,7 +60,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLine.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -79,7 +79,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -100,7 +100,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -124,7 +124,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .carriageReturn()
 		        .build();
 		
@@ -145,7 +145,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .carriageReturn()
 		        .build();
 		
@@ -167,7 +167,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .carriageReturnThenLinefeed()
 		        .build();
 		
@@ -189,7 +189,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .carriageReturnThenLinefeed()
 		        .build();
 		
@@ -213,7 +213,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -235,7 +235,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -258,7 +258,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source).newlineType(NewlineType.TO_BE_DETERMINED)
+		LineReader inStream = new LineReaderBuilder(source).newlineType(NewlineType.TO_BE_DETERMINED)
 		        .build();
 		
 		// We will get the original lines.
@@ -279,7 +279,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -302,7 +302,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -325,7 +325,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -352,7 +352,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStreamBuilder(source)
+		LineReader inStream = new LineReaderBuilder(source)
 		        .newlineType(NewlineType.TO_BE_DETERMINED)
 		        .build();
 		
@@ -376,7 +376,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should the line in time.
 		assertEquals("123", inStream.readLine(50));
@@ -391,7 +391,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should the line in time without waiting for timeout.
 		long startTime = System.currentTimeMillis();
@@ -409,7 +409,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get the line.
 		assertEquals("123", inStream.readLine(50));
@@ -424,7 +424,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -452,7 +452,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -479,7 +479,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -505,7 +505,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -530,7 +530,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -584,7 +584,7 @@ public class LineInputStreamTest {
 		};
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond
 		try {
@@ -616,7 +616,7 @@ public class LineInputStreamTest {
 		};
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		LineReader inStream = new LineReaderBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond
 		try {

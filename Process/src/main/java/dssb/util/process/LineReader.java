@@ -2,7 +2,7 @@ package dssb.util.process;
 
 import java.io.IOException;
 
-public class LineInputStream {
+public class LineReader {
 	
 	public static final String NULL_SOURCE = "The source character iterator cannot be null.";
 	
@@ -22,7 +22,7 @@ public class LineInputStream {
 	
 	private volatile ReadThread readThread = null;
 	
-	public LineInputStream(NewlineType nlType, CharIterator charIterator) {
+	public LineReader(NewlineType nlType, CharIterator charIterator) {
 		this.charIterator = charIterator;
 		this.nlType = nlType;
 		
@@ -359,7 +359,7 @@ public class LineInputStream {
 						theReadThread.mainThread.interrupt();
 					} else {
 						// is not yet attached to other main thread so added to leftLine.
-						synchronized (LineInputStream.this) {
+						synchronized (LineReader.this) {
 							String line = theReadThread.line;
 							leftLine = ((line != null) ? line : "");
 						}
