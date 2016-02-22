@@ -1,6 +1,7 @@
 package dssb.util.process;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -16,9 +17,11 @@ public class LineInputStreamTest {
 	public void unknownNewlineIsNotSupported() throws IOException {
 		InputStream source = new ByteArrayInputStream("".getBytes());
 		try {
-			new LineInputStream(NewlineType.UNKNOWN, source);
+			new LineInputStream.Builder(source)
+			        .newlineType(NewlineType.UNKNOWN)
+			        .build();
 			fail("Expect an exception!");
-		} catch(IllegalArgumentException exception) {
+		} catch (IllegalArgumentException exception) {
 			assertEquals(LineInputStream.UNKNOWN_NOT_SUPPORT, exception.getMessage());
 		}
 	}
@@ -26,11 +29,26 @@ public class LineInputStreamTest {
 	@Test
 	public void nullSource() throws IOException {
 		try {
-			new LineInputStream(null);
+			new LineInputStream.Builder(null)
+			        .build();
 			fail("Expect an exception!");
-		} catch(NullPointerException exception) {
+		} catch (NullPointerException exception) {
 			assertEquals(LineInputStream.NULL_SOURCE, exception.getMessage());
 		}
+	}
+	
+	@Test
+	public void readNoLine_meansOneline() throws IOException {
+		// Given lines.
+		String orgText = "Hello";
+		InputStream source = new ByteArrayInputStream(orgText.getBytes());
+		
+		// Read it with LF as a new line.
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .build();
+		
+		// We will get the original lines.
+		assertEquals(orgText, inStream.readLine());
 	}
 	
 	@Test
@@ -43,7 +61,9 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLine.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .linefeed()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText, inStream.readLine());
@@ -60,7 +80,9 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .linefeed()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -68,7 +90,7 @@ public class LineInputStreamTest {
 	}
 	
 	@Test
-	public void readTwoLines_withLeftover() throws IOException {
+	public void readTwoLines_withLeftover_theLeftoverBecomeLastLine() throws IOException {
 		// Given lines with a leftover.
 		String orgText1 = "Hello";
 		String orgText2 = "There";
@@ -79,15 +101,17 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.LINE_FEED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .linefeed()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
-		// ... ensure that is no more line.
+		// ... the left over becomes the last line
+		assertEquals(orgText3, inStream.readLine());
+		// ... no more left
 		assertEquals(null, inStream.readLine());
-		// ... check the left over.
-		assertEquals(orgText3, inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -101,15 +125,15 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .carriageReturn()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
-		// ... check that no more the left over.
-		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -122,15 +146,15 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .carriageReturn()
+		        .build();
 		
 		// We will get the original lines with the LFs inside them.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
-		// ... check that no more the left over.
-		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -144,15 +168,15 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN_LINE_FEED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .carriageReturnThenLinefeed()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
-		// ... check that no more the left over.
-		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	@Test
@@ -166,15 +190,15 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.CARRIAGE_RETURN_LINE_FEED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .carriageReturnThenLinefeed()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// ... ensure that is no more line.
 		assertEquals(null, inStream.readLine());
-		// ... check that no more the left over.
-		assertEquals("", inStream.peekLeftOver());
 	}
 	
 	// == To be determined ============================================================================================
@@ -190,8 +214,10 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
-
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .toBeDetermined()
+		        .build();
+		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
@@ -210,15 +236,18 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
-
-		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .toBeDetermined()
+		        .build();
+		
+		// We will get the original lines with CR in the second line as it was already determined that LF is the
+		// newline.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// This become a newline line input stream
 		assertEquals(NewlineType.LINE_FEED, inStream.getNewlineType());
 	}
-
+	
 	@Test
 	public void toBeDetermined_CR() throws IOException {
 		// Given lines.
@@ -230,7 +259,8 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source).newlineType(NewlineType.TO_BE_DETERMINED)
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -250,15 +280,18 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .toBeDetermined()
+		        .build();
 		
-		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		// We will get the original lines with CR in the second line as it was already determined that LF is the
+		// newline.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		// This become a newline line input stream
 		assertEquals(NewlineType.CARRIAGE_RETURN, inStream.getNewlineType());
 	}
-
+	
 	@Test
 	public void toBeDetermined_CRLF() throws IOException {
 		// Given lines.
@@ -270,7 +303,9 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .toBeDetermined()
+		        .build();
 		
 		// We will get the original lines.
 		assertEquals(orgText1, inStream.readLine());
@@ -291,9 +326,12 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .toBeDetermined()
+		        .build();
 		
-		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		// We will get the original lines with CR in the second line as it was already determined that LF is the
+		// newline.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		assertEquals(orgText3, inStream.readLine());
@@ -302,7 +340,6 @@ public class LineInputStreamTest {
 	}
 	
 	// == Non Roman ====================================================================================================
-
 	
 	@Test
 	public void nonLatin() throws IOException {
@@ -316,13 +353,273 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream(NewlineType.TO_BE_DETERMINED, source);
+		LineInputStream inStream = new LineInputStream.Builder(source)
+		        .newlineType(NewlineType.TO_BE_DETERMINED)
+		        .build();
 		
-		// We will get the original lines with CR in the second line as it was already determined that LF is the newline.
+		// We will get the original lines with CR in the second line as it was already determined that LF is the
+		// newline.
 		assertEquals(orgText1, inStream.readLine());
 		assertEquals(orgText2, inStream.readLine());
 		assertEquals(orgText3, inStream.readLine());
 		// This become a newline line input stream
 		assertEquals(NewlineType.CARRIAGE_RETURN_LINE_FEED, inStream.getNewlineType());
 	}
+	
+	// == Timeout ======================================================================================================
+	
+	@Test
+	public void timeout_inTime() throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a text that is shorter than 5 characters with a newline at the end.
+		String text = "123\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should the line in time.
+		assertEquals("123", inStream.readLine(50));
+	}
+	
+	@Test
+	public void timeout_inTime_noLine() throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a text that is shorter than 5 characters with no newline at the end.
+		String text = "123";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get the line.
+		assertEquals("123", inStream.readLine(50));
+	}
+	
+	@Test
+	public void timeout_tooLong_doneBeforeNextCall() throws IOException, InterruptedException {
+		// Give a text that is longer than 5 characters with a new line at the end.
+		String text = "1234567\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get part of the line.
+		try {
+			inStream.readLine(55);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("12345", exception.getPart());
+		}
+		
+		// Sleep some more to ensure the read was done.
+		Thread.sleep(30);
+		
+		// Read again ... the previous read should be done by now.
+		assertEquals("67", inStream.readLine());
+		assertEquals(null, inStream.readLine());
+	}
+	
+	@Test
+	public void timeout_tooLong_doneBeforeNextReadTimeoutCall() throws IOException, InterruptedException,
+	        ReadLineTimeoutException {
+		// Give a text that is longer than 5 characters with a new line at the end.
+		String text = "1234567\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get part of the line.
+		try {
+			inStream.readLine(55);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("12345", exception.getPart());
+		}
+		
+		// Sleep some more to ensure the read was done.
+		Thread.sleep(30);
+		
+		// Read again ... the previous read should be done by now.
+		assertEquals("67", inStream.readLine(100));
+		assertEquals(null, inStream.readLine());
+	}
+	
+	@Test
+	public void timeout_tooLong_doneWithNextReadAllCall() throws IOException, InterruptedException {
+		// Give a text that is longer than 5 characters with a new line at the end.
+		String text = "1234567890123456\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get part of the line.
+		try {
+			inStream.readLine(55);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("12345", exception.getPart());
+		}
+		
+		// Read again ... the previous read should NOT be done by now.
+		// Since this is a read all, it should be done with in this call.
+		assertEquals("67890123456", inStream.readLine());
+		assertEquals(null, inStream.readLine());
+	}
+	
+	@Test
+	public void timeout_tooLong_doneWithNextReadTimeoutCall()
+	        throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a text that is longer than 5 characters with a new line at the end.
+		String text = "12345678\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get part of the line.
+		try {
+			inStream.readLine(55);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("12345", exception.getPart());
+		}
+		
+		// Read again ... the previous read should NOT be done by now.
+		assertEquals("678", inStream.readLine(100));
+		assertEquals(null, inStream.readLine());
+	}
+	
+	@Test
+	public void timeout_tooLong_doneWithThreeNextReadTimeoutCall()
+	        throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a text that is longer than 5 characters with a new line at the end.
+		String text = "12345678\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should get part of the line.
+		try {
+			inStream.readLine(55);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("12345", exception.getPart());
+		}
+		
+		try {
+			inStream.readLine(10);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("6", exception.getPart());
+		}
+		
+		try {
+			inStream.readLine(10);
+			fail("Expect an exception!");
+		} catch (ReadLineTimeoutException exception) {
+			assertEquals("7", exception.getPart());
+		}
+		
+		// Read again ... the previous read should NOT be done by now.
+		assertEquals("8", inStream.readLine(20));
+		assertEquals(null, inStream.readLine());
+	}
+	
+	@Test
+	public void timeout_runtimeException()
+	        throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a runtime exception.
+		final RuntimeException theException = new RuntimeException();
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = new InputStream() {
+			@Override
+			public int read() throws IOException {
+				try {
+					Thread.sleep(25);
+				} catch (InterruptedException e) {
+					// Blank
+				}
+				throw theException;
+			}
+		};
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond
+		try {
+			inStream.readLine(50);
+			fail("Expect an exception!");
+		} catch (RuntimeException exception) {
+			// Expect the exception
+			assertEquals(theException, exception);
+		}
+	}
+	
+	@Test
+	public void timeout_ioException()
+	        throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give an IO exception.
+		final IOException theException = new IOException();
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = new InputStream() {
+			@Override
+			public int read() throws IOException {
+				try {
+					Thread.sleep(25);
+				} catch (InterruptedException e) {
+					// Blank
+				}
+				throw theException;
+			}
+		};
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		
+		// Read it for 50 millisecond
+		try {
+			inStream.readLine(50);
+			fail("Expect an exception!");
+		} catch (IOException exception) {
+			// Expect the exception
+			assertEquals(theException, exception);
+		}
+	}
+	
+	private InputStream createSlowInputStream(String text) {
+		final InputStream source = new ByteArrayInputStream(text.getBytes());
+		final InputStream slowSource = new InputStream() {
+			@Override
+			public int read() throws IOException {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				return source.read();
+			}
+		};
+		return slowSource;
+	}
+	
 }

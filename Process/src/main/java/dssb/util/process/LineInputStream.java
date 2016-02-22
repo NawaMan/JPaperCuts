@@ -2,12 +2,15 @@ package dssb.util.process;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 
 public class LineInputStream {
 	
 	public static final String NULL_SOURCE = "The source input stream cannot be null.";
 	
 	public static final String UNKNOWN_NOT_SUPPORT = "UNKNOWN newline type is not supported.";
+	
+	public static final long NO_TIMEOUT = -1;
 	
 	public static enum NewlineType {
 		
@@ -36,17 +39,11 @@ public class LineInputStream {
 	
 	private volatile String leftOver = "";
 	
+	private volatile String leftLine = null;
+	
 	private final CharIterator charIterator = new CharIterator();
 	
 	private volatile NewLineStrategy nlStrategy;
-	
-	public LineInputStream(InputStream source) {
-		this(null, null, source);
-	}
-	
-	public LineInputStream(NewlineType nlType, InputStream source) {
-		this(null, nlType, source);
-	}
 	
 	public LineInputStream(CharStreamDecoder decoder, NewlineType nlType, InputStream source) {
 		if (source == null) {
@@ -86,42 +83,241 @@ public class LineInputStream {
 		return this.nlType;
 	}
 	
-	private StringBuffer absorbLeftOver() {
-		StringBuffer line = new StringBuffer();
+	private StringBuffer absorbLeftOver(StringBuffer line) {
 		line.append(leftOver);
 		leftOver = "";
 		return line;
 	}
 	
-	public synchronized String readLine() throws IOException {
-		StringBuffer line = absorbLeftOver();
+	public String readLine() throws IOException {
+		StringBuffer lineBuffer = new StringBuffer();
+		String line = readLine(lineBuffer);
+		return line;
+	}
+	
+	private static class ReadThread extends Thread {
+		
+		private final StringBuffer lineBuffer;
+		
+		private volatile Thread mainThread;
+		
+		private volatile boolean isDone;
+		
+		private volatile String line = null;
+		
+		private volatile RuntimeException runtimeException = null;
+		
+		private volatile IOException ioException = null;
+		
+		ReadThread(Thread mainThread, StringBuffer lineBuffer, Runnable runnable) {
+			super(runnable, "ReadThread");
+			this.isDone = false;
+			this.mainThread = mainThread;
+			this.lineBuffer = (lineBuffer != null) ? lineBuffer : new StringBuffer();
+		}
+		
+	}
+	
+	private volatile ReadThread readThread = null;
+	
+	public String readLine(long timeout) throws IOException, ReadLineTimeoutException, InterruptedException {
+		if (leftLine != null) {
+			synchronized (this) {
+				String line = leftLine;
+				leftLine = null;
+				return line;
+			}
+		}
+		
+		if ((readThread == null) || readThread.isDone) {
+			final StringBuffer lineBuffer = new StringBuffer();
+			readThread = new ReadThread(Thread.currentThread(), lineBuffer, new Runnable() {
+				@Override
+				public void run() {
+					final ReadThread theReadThread = readThread;
+					try {
+						String line = readLine(lineBuffer);
+						theReadThread.line = line;
+					} catch (IOException e) {
+						theReadThread.ioException = e;
+					} catch (RuntimeException e) {
+						theReadThread.runtimeException = e;
+					} finally {
+						synchronized (theReadThread) {
+							theReadThread.isDone = true;
+							if (theReadThread.mainThread != null) {
+								// Attached with a mainThread ... so interrupted it.
+								theReadThread.mainThread.interrupt();
+							} else {
+								// is not yet attach to other main thread so added to leftLine.
+								synchronized (LineInputStream.this) {
+									String line = theReadThread.line;
+									leftLine = ((line != null) ? line : "");
+								}
+							}
+						}
+					}
+				}
+			});
+			readThread.start();
+		} else {
+			readThread.mainThread = Thread.currentThread();
+		}
+		
+		InterruptedException interruptedException = null;
+		if (!readThread.isDone) {
+			try {
+				Thread.sleep(timeout);
+			} catch (InterruptedException exception) {
+				interruptedException = exception;
+			}
+		}
+		
+		boolean isDone = false;
+		synchronized (readThread) {
+			isDone = readThread.isDone;
+			readThread.mainThread = null;
+			
+			if (isDone) {
+				RuntimeException runtimeException = readThread.runtimeException;
+				if (runtimeException != null) {
+					throw runtimeException;
+				}
+				
+				IOException ioException = readThread.ioException;
+				if (ioException != null) {
+					throw ioException;
+				}
+				String readLine = readThread.line;
+				return readLine;
+			}
+		}
+		
+		if (interruptedException != null) {
+			// Sleep was interrupted because of another reason
+			throw interruptedException;
+		}
+		
+		String readPart = readThread.lineBuffer.toString();
+		readThread.lineBuffer.delete(0, readPart.length());
+		throw new ReadLineTimeoutException(readPart);
+	}
+	
+	private synchronized String readLine(StringBuffer lineBuffer) throws IOException {
+		if (leftLine != null) {
+			lineBuffer.append(leftLine);
+			leftLine = null;
+			return lineBuffer.toString();
+		}
+		
+		absorbLeftOver(lineBuffer);
 		
 		nlStrategy.reset();
 		
 		try {
 			while (true) {
 				char ch = charIterator.next();
-				String readLine = nlStrategy.processChar(ch, line);
+				String readLine = nlStrategy.processChar(ch, lineBuffer);
 				if (readLine != null) {
 					return readLine;
 				}
 			}
 		} catch (EndOfStreamException exception) {
 			// This block is intentionally left blank.
+			String readLine = lineBuffer.toString();
+			if (readLine.isEmpty()) {
+				return null;
+			} else {
+				return readLine;
+			}
+		}
+	}
+	
+	// == Creation =====================================================================================================
+	
+	public static class Builder {
+		
+		private CharStreamDecoder decoder = new CharStreamDecoder();
+		private NewlineType nlType = NewlineType.TO_BE_DETERMINED;
+		private final InputStream source;
+		
+		public Builder(InputStream source) {
+			this.source = source;
+			if (this.source == null) {
+				throw new NullPointerException(NULL_SOURCE);
+			}
 		}
 		
-		leftOver = line.toString();
-		return null;
-	}
-	
-	public synchronized String peekLeftOver() {
-		return leftOver;
-	}
-	
-	public synchronized String takeLeftOver() {
-		String theLeftOver = leftOver;
-		leftOver = "";
-		return theLeftOver;
+		public Builder decoder(CharStreamDecoder decoder) {
+			this.decoder = decoder;
+			return this;
+		}
+		
+		public Builder charset(Charset charset) {
+			int capacity = (this.decoder != null) ? this.decoder.getCapacity() : CharStreamDecoder.DEFAULT_CAPACITY;
+			this.decoder = new CharStreamDecoder(charset, capacity);
+			return this;
+		}
+		
+		public Builder newlineType(NewlineType nlType) {
+			this.nlType = nlType;
+			return this;
+		}
+		
+		public Builder linefeed() {
+			newlineType(NewlineType.LINE_FEED);
+			return this;
+		}
+		
+		public Builder carriageReturn() {
+			newlineType(NewlineType.CARRIAGE_RETURN);
+			return this;
+		}
+		
+		public Builder carriageReturnThenLinefeed() {
+			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
+			return this;
+		}
+		
+		public Builder toBeDetermined() {
+			newlineType(NewlineType.TO_BE_DETERMINED);
+			return this;
+		}
+		
+		public Builder unix() {
+			newlineType(NewlineType.LINE_FEED);
+			return this;
+		}
+		
+		public Builder mac() {
+			newlineType(NewlineType.CARRIAGE_RETURN);
+			return this;
+		}
+		
+		public Builder windows() {
+			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
+			return this;
+		}
+		
+		public Builder lf() {
+			newlineType(NewlineType.LINE_FEED);
+			return this;
+		}
+		
+		public Builder cr() {
+			newlineType(NewlineType.CARRIAGE_RETURN);
+			return this;
+		}
+		
+		public Builder crlf() {
+			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
+			return this;
+		}
+		
+		public LineInputStream build() {
+			return new LineInputStream(decoder, nlType, source);
+		}
+		
 	}
 	
 	// == Utilities ====================================================================================================
@@ -283,7 +479,7 @@ public class LineInputStream {
 		
 	}
 	
-	static class EndOfStreamException extends Throwable {
+	private static class EndOfStreamException extends Throwable {
 		
 		/** */
 		private static final long serialVersionUID = 1L;
