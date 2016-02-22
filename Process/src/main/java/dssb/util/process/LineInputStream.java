@@ -1,58 +1,30 @@
 package dssb.util.process;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
 
 public class LineInputStream {
 	
-	public static final String NULL_SOURCE = "The source input stream cannot be null.";
+	public static final String NULL_SOURCE = "The source character iterator cannot be null.";
 	
 	public static final String UNKNOWN_NOT_SUPPORT = "UNKNOWN newline type is not supported.";
 	
 	public static final long NO_TIMEOUT = -1;
 	
-	public static enum NewlineType {
-		
-		/** Linefeed ('\n') only. */
-		LINE_FEED,
-		
-		/** CarriageReturn ('\r') followed by Linefeed ('\n'). */
-		CARRIAGE_RETURN_LINE_FEED,
-		
-		/** CarriageReturn ('\r') only. */
-		CARRIAGE_RETURN,
-		
-		/** To be determine */
-		TO_BE_DETERMINED,
-		
-		/** Unknown */
-		UNKNOWN;
-		
-	}
-	
-	private final InputStream source;
-	
-	private final CharStreamDecoder decoder;
+	private final CharIterator charIterator;
 	
 	private volatile NewlineType nlType;
+	
+	private volatile NewLineStrategy nlStrategy;
 	
 	private volatile String leftOver = "";
 	
 	private volatile String leftLine = null;
 	
-	private final CharIterator charIterator = new CharIterator();
+	private volatile ReadThread readThread = null;
 	
-	private volatile NewLineStrategy nlStrategy;
-	
-	public LineInputStream(CharStreamDecoder decoder, NewlineType nlType, InputStream source) {
-		if (source == null) {
-			throw new NullPointerException(NULL_SOURCE);
-		}
-		
-		this.decoder = (decoder != null) ? decoder : new CharStreamDecoder();
+	public LineInputStream(NewlineType nlType, CharIterator charIterator) {
+		this.charIterator = charIterator;
 		this.nlType = nlType;
-		this.source = source;
 		
 		if (this.nlType == null) {
 			this.nlType = NewlineType.TO_BE_DETERMINED;
@@ -83,124 +55,120 @@ public class LineInputStream {
 		return this.nlType;
 	}
 	
-	private StringBuffer absorbLeftOver(StringBuffer line) {
-		line.append(leftOver);
-		leftOver = "";
-		return line;
-	}
-	
 	public String readLine() throws IOException {
 		StringBuffer lineBuffer = new StringBuffer();
 		String line = readLine(lineBuffer);
 		return line;
 	}
 	
-	private static class ReadThread extends Thread {
-		
-		private final StringBuffer lineBuffer;
-		
-		private volatile Thread mainThread;
-		
-		private volatile boolean isDone;
-		
-		private volatile String line = null;
-		
-		private volatile RuntimeException runtimeException = null;
-		
-		private volatile IOException ioException = null;
-		
-		ReadThread(Thread mainThread, StringBuffer lineBuffer, Runnable runnable) {
-			super(runnable, "ReadThread");
-			this.isDone = false;
-			this.mainThread = mainThread;
-			this.lineBuffer = (lineBuffer != null) ? lineBuffer : new StringBuffer();
+	public String readLine(long timeout) throws IOException, ReadLineTimeoutException, InterruptedException {
+		String leftLine = checkLeftLineFirst();
+		if (leftLine != null) {
+			return leftLine;
 		}
 		
+		try {
+			setUpReadThread();
+			letsRead(timeout);
+			
+			String line = processDone();
+			if (line != null) {
+				return line;
+			} else {
+				String readPart = extractAlreadyReadPart();
+				throw new ReadLineTimeoutException(readPart);
+			}
+		} finally {
+			detachReadThread();
+		}
 	}
 	
-	private volatile ReadThread readThread = null;
-	
-	public String readLine(long timeout) throws IOException, ReadLineTimeoutException, InterruptedException {
-		if (leftLine != null) {
-			synchronized (this) {
-				String line = leftLine;
-				leftLine = null;
-				return line;
+	private String checkLeftLineFirst() {
+		if (leftLine == null) {
+			return null;
+		}
+		
+		synchronized (this) {
+			if (leftLine == null) {
+				return null;
 			}
-		}
-		
-		if ((readThread == null) || readThread.isDone) {
-			final StringBuffer lineBuffer = new StringBuffer();
-			readThread = new ReadThread(Thread.currentThread(), lineBuffer, new Runnable() {
-				@Override
-				public void run() {
-					final ReadThread theReadThread = readThread;
-					try {
-						String line = readLine(lineBuffer);
-						theReadThread.line = line;
-					} catch (IOException e) {
-						theReadThread.ioException = e;
-					} catch (RuntimeException e) {
-						theReadThread.runtimeException = e;
-					} finally {
-						synchronized (theReadThread) {
-							theReadThread.isDone = true;
-							if (theReadThread.mainThread != null) {
-								// Attached with a mainThread ... so interrupted it.
-								theReadThread.mainThread.interrupt();
-							} else {
-								// is not yet attach to other main thread so added to leftLine.
-								synchronized (LineInputStream.this) {
-									String line = theReadThread.line;
-									leftLine = ((line != null) ? line : "");
-								}
-							}
-						}
-					}
-				}
-			});
-			readThread.start();
-		} else {
-			readThread.mainThread = Thread.currentThread();
-		}
-		
-		InterruptedException interruptedException = null;
-		if (!readThread.isDone) {
-			try {
-				Thread.sleep(timeout);
-			} catch (InterruptedException exception) {
-				interruptedException = exception;
-			}
-		}
-		
-		boolean isDone = false;
-		synchronized (readThread) {
-			isDone = readThread.isDone;
-			readThread.mainThread = null;
 			
-			if (isDone) {
-				RuntimeException runtimeException = readThread.runtimeException;
-				if (runtimeException != null) {
-					throw runtimeException;
-				}
-				
-				IOException ioException = readThread.ioException;
-				if (ioException != null) {
-					throw ioException;
-				}
-				String readLine = readThread.line;
-				return readLine;
+			String line = leftLine;
+			leftLine = null;
+			return line;
+		}
+	}
+	
+	private void setUpReadThread() {
+		if ((readThread == null) || readThread.isDone) {
+			useNewReadThread();
+		} else {
+			attachExistingReadThread();
+		}
+	}
+	
+	private void useNewReadThread() {
+		StringBuffer lineBuffer = new StringBuffer();
+		readThread = new ReadThread(lineBuffer);
+		readThread.mainThread = Thread.currentThread();
+		readThread.start();
+	}
+	
+	private void attachExistingReadThread() {
+		readThread.mainThread = Thread.currentThread();
+	}
+	
+	private void letsRead(long timeout) throws InterruptedException {
+		synchronized (readThread) {
+			if (readThread.isDone) {
+				return;
 			}
 		}
 		
-		if (interruptedException != null) {
-			// Sleep was interrupted because of another reason
-			throw interruptedException;
+		try {
+			Thread.sleep(timeout);
+		} catch (InterruptedException exception) {
+			synchronized (readThread) {
+				readThread.mainThread = null;
+				if (!readThread.isDone) {
+					// Interrupted because of other reason.
+					throw exception;
+				}
+			}
 		}
-		
+	}
+	
+	private String processDone() throws IOException {
+		synchronized (readThread) {
+			readThread.mainThread = null;
+			if (!readThread.isDone) {
+				return null;
+			}
+			
+			RuntimeException runtimeException = readThread.runtimeException;
+			if (runtimeException != null) {
+				throw runtimeException;
+			}
+			
+			IOException ioException = readThread.ioException;
+			if (ioException != null) {
+				throw ioException;
+			}
+			String readLine = readThread.line;
+			return readLine;
+		}
+	}
+	
+	private String extractAlreadyReadPart() {
 		String readPart = readThread.lineBuffer.toString();
 		readThread.lineBuffer.delete(0, readPart.length());
-		throw new ReadLineTimeoutException(readPart);
+		return readPart;
+	}
+	
+	private void detachReadThread() {
+		if (readThread != null) {
+			readThread.mainThread = null;
+		}
 	}
 	
 	private synchronized String readLine(StringBuffer lineBuffer) throws IOException {
@@ -222,7 +190,7 @@ public class LineInputStream {
 					return readLine;
 				}
 			}
-		} catch (EndOfStreamException exception) {
+		} catch (NoMoreCharException exception) {
 			// This block is intentionally left blank.
 			String readLine = lineBuffer.toString();
 			if (readLine.isEmpty()) {
@@ -233,139 +201,13 @@ public class LineInputStream {
 		}
 	}
 	
-	// == Creation =====================================================================================================
-	
-	public static class Builder {
-		
-		private CharStreamDecoder decoder = new CharStreamDecoder();
-		private NewlineType nlType = NewlineType.TO_BE_DETERMINED;
-		private final InputStream source;
-		
-		public Builder(InputStream source) {
-			this.source = source;
-			if (this.source == null) {
-				throw new NullPointerException(NULL_SOURCE);
-			}
-		}
-		
-		public Builder decoder(CharStreamDecoder decoder) {
-			this.decoder = decoder;
-			return this;
-		}
-		
-		public Builder charset(Charset charset) {
-			int capacity = (this.decoder != null) ? this.decoder.getCapacity() : CharStreamDecoder.DEFAULT_CAPACITY;
-			this.decoder = new CharStreamDecoder(charset, capacity);
-			return this;
-		}
-		
-		public Builder newlineType(NewlineType nlType) {
-			this.nlType = nlType;
-			return this;
-		}
-		
-		public Builder linefeed() {
-			newlineType(NewlineType.LINE_FEED);
-			return this;
-		}
-		
-		public Builder carriageReturn() {
-			newlineType(NewlineType.CARRIAGE_RETURN);
-			return this;
-		}
-		
-		public Builder carriageReturnThenLinefeed() {
-			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
-			return this;
-		}
-		
-		public Builder toBeDetermined() {
-			newlineType(NewlineType.TO_BE_DETERMINED);
-			return this;
-		}
-		
-		public Builder unix() {
-			newlineType(NewlineType.LINE_FEED);
-			return this;
-		}
-		
-		public Builder mac() {
-			newlineType(NewlineType.CARRIAGE_RETURN);
-			return this;
-		}
-		
-		public Builder windows() {
-			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
-			return this;
-		}
-		
-		public Builder lf() {
-			newlineType(NewlineType.LINE_FEED);
-			return this;
-		}
-		
-		public Builder cr() {
-			newlineType(NewlineType.CARRIAGE_RETURN);
-			return this;
-		}
-		
-		public Builder crlf() {
-			newlineType(NewlineType.CARRIAGE_RETURN_LINE_FEED);
-			return this;
-		}
-		
-		public LineInputStream build() {
-			return new LineInputStream(decoder, nlType, source);
-		}
-		
-	}
-	
-	// == Utilities ====================================================================================================
-	
-	public static String getSystemNewline() {
-		return System.getProperty("line.separator");
-	}
-	
-	public static NewlineType getSystemNewlineType() {
-		String systemNewline = System.getProperty("line.separator");
-		if ("\n".equals(systemNewline)) {
-			return NewlineType.LINE_FEED;
-		}
-		if ("\r".equals(systemNewline)) {
-			return NewlineType.CARRIAGE_RETURN;
-		}
-		if ("\r\n".equals(systemNewline)) {
-			return NewlineType.CARRIAGE_RETURN_LINE_FEED;
-		}
-		
-		return NewlineType.UNKNOWN;
+	private StringBuffer absorbLeftOver(StringBuffer line) {
+		line.append(leftOver);
+		leftOver = "";
+		return line;
 	}
 	
 	// == Helper classes ===============================================================================================
-	
-	private class CharIterator {
-		char[] chars = new char[0];
-		int index = -1;
-		boolean isDone = false;
-		
-		public synchronized char next() throws EndOfStreamException, IOException {
-			if (isDone) {
-				throw new EndOfStreamException();
-			}
-			
-			index++;
-			while (index >= chars.length) {
-				int read = source.read();
-				if (read == -1) {
-					isDone = true;
-					throw new EndOfStreamException();
-				}
-				chars = decoder.take((byte) read);
-				index = 0;
-			}
-			return chars[index];
-		}
-	}
 	
 	private interface NewLineStrategy {
 		
@@ -479,10 +321,52 @@ public class LineInputStream {
 		
 	}
 	
-	private static class EndOfStreamException extends Throwable {
+	private class ReadThread extends Thread {
 		
-		/** */
-		private static final long serialVersionUID = 1L;
+		private final StringBuffer lineBuffer;
+		
+		private volatile Thread mainThread = null;
+		
+		private volatile boolean isDone = false;
+		
+		private volatile String line = null;
+		
+		private volatile RuntimeException runtimeException = null;
+		
+		private volatile IOException ioException = null;
+		
+		ReadThread(StringBuffer lineBuffer) {
+			super("ReadThread");
+			this.isDone = false;
+			this.lineBuffer = (lineBuffer != null) ? lineBuffer : new StringBuffer();
+		}
+		
+		@Override
+		public void run() {
+			final ReadThread theReadThread = readThread;
+			try {
+				String line = readLine(lineBuffer);
+				theReadThread.line = line;
+			} catch (IOException e) {
+				theReadThread.ioException = e;
+			} catch (RuntimeException e) {
+				theReadThread.runtimeException = e;
+			} finally {
+				synchronized (theReadThread) {
+					theReadThread.isDone = true;
+					if (theReadThread.mainThread != null) {
+						// Attached with a mainThread ... so interrupted it.
+						theReadThread.mainThread.interrupt();
+					} else {
+						// is not yet attached to other main thread so added to leftLine.
+						synchronized (LineInputStream.this) {
+							String line = theReadThread.line;
+							leftLine = ((line != null) ? line : "");
+						}
+					}
+				}
+			}
+		}
 		
 	}
 	

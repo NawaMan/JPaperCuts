@@ -1,6 +1,7 @@
 package dssb.util.process;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -9,15 +10,13 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
-import dssb.util.process.LineInputStream.NewlineType;
-
 public class LineInputStreamTest {
 	
 	@Test
 	public void unknownNewlineIsNotSupported() throws IOException {
 		InputStream source = new ByteArrayInputStream("".getBytes());
 		try {
-			new LineInputStream.Builder(source)
+			new LineInputStreamBuilder(source)
 			        .newlineType(NewlineType.UNKNOWN)
 			        .build();
 			fail("Expect an exception!");
@@ -29,7 +28,7 @@ public class LineInputStreamTest {
 	@Test
 	public void nullSource() throws IOException {
 		try {
-			new LineInputStream.Builder(null)
+			new LineInputStreamBuilder((CharIterator) null)
 			        .build();
 			fail("Expect an exception!");
 		} catch (NullPointerException exception) {
@@ -44,7 +43,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgText.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .build();
 		
 		// We will get the original lines.
@@ -61,7 +60,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLine.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -80,7 +79,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -101,7 +100,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with LF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .linefeed()
 		        .build();
 		
@@ -125,7 +124,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .carriageReturn()
 		        .build();
 		
@@ -146,7 +145,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CR as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .carriageReturn()
 		        .build();
 		
@@ -168,7 +167,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .carriageReturnThenLinefeed()
 		        .build();
 		
@@ -190,7 +189,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with CRLF as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .carriageReturnThenLinefeed()
 		        .build();
 		
@@ -214,7 +213,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -236,7 +235,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -259,7 +258,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source).newlineType(NewlineType.TO_BE_DETERMINED)
+		LineInputStream inStream = new LineInputStreamBuilder(source).newlineType(NewlineType.TO_BE_DETERMINED)
 		        .build();
 		
 		// We will get the original lines.
@@ -280,7 +279,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -303,7 +302,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -326,7 +325,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .toBeDetermined()
 		        .build();
 		
@@ -353,7 +352,7 @@ public class LineInputStreamTest {
 		InputStream source = new ByteArrayInputStream(orgLines.getBytes());
 		
 		// Read it with ToBeDetermine as a new line.
-		LineInputStream inStream = new LineInputStream.Builder(source)
+		LineInputStream inStream = new LineInputStreamBuilder(source)
 		        .newlineType(NewlineType.TO_BE_DETERMINED)
 		        .build();
 		
@@ -377,10 +376,28 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should the line in time.
 		assertEquals("123", inStream.readLine(50));
+	}
+	
+	@Test
+	public void timeout_inTime_dontWaitLong() throws IOException, InterruptedException, ReadLineTimeoutException {
+		// Give a text that is shorter than 5 characters with a newline at the end.
+		String text = "123\n";
+		
+		// Create an input stream that give out a byte every 10 milliseconds.
+		final InputStream slowSource = createSlowInputStream(text);
+		
+		// Read line using a LineInputStream.
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
+		
+		// Read it for 50 millisecond ... an we should the line in time without waiting for timeout.
+		long startTime = System.currentTimeMillis();
+		assertEquals("123", inStream.readLine(60_000));
+		long processTime = System.currentTimeMillis() - startTime;
+		assertTrue(processTime < 50);
 	}
 	
 	@Test
@@ -392,7 +409,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get the line.
 		assertEquals("123", inStream.readLine(50));
@@ -407,7 +424,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -435,7 +452,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -462,7 +479,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -488,7 +505,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -513,7 +530,7 @@ public class LineInputStreamTest {
 		final InputStream slowSource = createSlowInputStream(text);
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond ... an we should get part of the line.
 		try {
@@ -523,6 +540,7 @@ public class LineInputStreamTest {
 			assertEquals("12345", exception.getPart());
 		}
 		
+		// Read again ... get one more character but still not a line.
 		try {
 			inStream.readLine(10);
 			fail("Expect an exception!");
@@ -530,6 +548,7 @@ public class LineInputStreamTest {
 			assertEquals("6", exception.getPart());
 		}
 		
+		// Read again ... get one more character but still not a line.
 		try {
 			inStream.readLine(10);
 			fail("Expect an exception!");
@@ -537,9 +556,12 @@ public class LineInputStreamTest {
 			assertEquals("7", exception.getPart());
 		}
 		
-		// Read again ... the previous read should NOT be done by now.
-		assertEquals("8", inStream.readLine(20));
+		// Read again ... the previous read should be done by now so get right away.
+		long startTime = System.currentTimeMillis();
+		assertEquals("8", inStream.readLine(60_0000));
 		assertEquals(null, inStream.readLine());
+		long processTime = System.currentTimeMillis() - startTime;
+		assertTrue(processTime < 50);
 	}
 	
 	@Test
@@ -562,7 +584,7 @@ public class LineInputStreamTest {
 		};
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond
 		try {
@@ -594,7 +616,7 @@ public class LineInputStreamTest {
 		};
 		
 		// Read line using a LineInputStream.
-		LineInputStream inStream = new LineInputStream.Builder(slowSource).build();
+		LineInputStream inStream = new LineInputStreamBuilder(slowSource).build();
 		
 		// Read it for 50 millisecond
 		try {
